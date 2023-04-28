@@ -1,0 +1,23 @@
+version: '3'
+services:
+  db:
+    image: postgres:15.0-alpine
+    container_name: azure-voting-db
+    environment:
+      POSTGRES_PASSWORD: "mypassword"
+    ports:
+      - "5432:5432"
+  app:
+    build: .
+    image: azure-voting-app-rust:v0.1-alpha
+    container_name: azure-voting-app
+    environment:
+      DATABASE_URL: "postgres://postgres:mypassword@azure-voting-db"
+      FIRST_VALUE: "Puppies"
+      SECOND_VALUE: "Kittens"
+      DATABASE_PASSWORD: "mypassword"
+      DATABASE_SERVER: "azure-voting-db"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - "db"

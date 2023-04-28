@@ -1,0 +1,8 @@
+# ignore .terraform directories
+**/.terraform/*
+**/*.tfstate
+**/*.tfstate.*
+**/README.md
+/target
+.env
+.DS_Store
