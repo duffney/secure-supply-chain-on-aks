@@ -173,6 +173,72 @@ export CLIENT_ID="$(terraform output -raw workload_identity_client_id)"
 
 ---
 
+
+## Deploy Gatekeeper and Ratify
+
+In this section, you'll deploy Gatekeeper and Ratify to your Azure Kubernetes Service cluster. Gatekeeper is an open-source project from the CNCF that allows you to enforce policies on your Kubernetes cluster. Ratify is a tool that allows you to deploy policies and constraints that prevent unsigned container image from being deployed to Kubernetes.
+
+### Get the Kubernetes credentials
+
+Run the following command to get the Kubernetes credentials for your cluster:
+
+```bash
+az aks get-credentials --resource-group ${GROUP_NAME} --name ${AKS_NAME}
+```
+
+### Deploy Gatekeeper
+
+Run the following command to deploy Gatekeeper to your cluster:
+
+```bash
+helm repo add gatekeeper https://open-policy-agent.github.io/gatekeeper/charts
+
+helm install gatekeeper/gatekeeper  \
+--name-template=gatekeeper \
+--namespace gatekeeper-system --create-namespace \
+--set enableExternalData=true \
+--set validatingWebhookTimeoutSeconds=5 \
+--set mutatingWebhookTimeoutSeconds=2
+```
+
+### Deploy Ratify
+
+Run the following command to deploy Ratify to your cluster:
+
+```bash
+helm repo add ratify https://deislabs.github.io/ratify
+
+helm install ratify \
+    ratify/ratify --atomic \
+    --namespace gatekeeper-system \
+    --set akvCertConfig.enabled=true \
+    --set akvCertConfig.vaultURI=${VAULT_URI} \
+    --set akvCertConfig.cert1Name=${CERT_NAME} \
+    --set akvCertConfig.tenantId=${TENANT_ID} \
+    --set oras.authProviders.azureWorkloadIdentityEnabled=true \
+    --set azureWorkloadIdentity.clientId=${CLIENT_ID}
+```
+
+### Deploy Ratfiy policies
+
+Once Ratify is deployed, you'll need to deploy the policies and constraints that prevent unsigned container images from being deployed to Kubernetes.
+
+Run the following command to deploy the Ratify policies to your cluster:
+
+```bash
+kubectl apply -f https://deislabs.github.io/ratify/library/default/template.yaml
+kubectl apply -f https://deislabs.github.io/ratify/library/default/samples/constraint.yaml
+```
+
+### Deploy the netMonitor container image
+
+<!-- TODO 
+
+deploy the netMonitor container image to the cluster unsigned to show that it is blocked
+-->
+
+---
+
 ## Scanning Container Images for Vulnerabilities
 
 Image scanning is a critical part of the container lifecycle. In this section, you'll use Trivy to scan a container image for vulnerabilities and secrets.
@@ -256,10 +322,6 @@ trivy image --clear-cache;
 trivy image --severity CRITICAL azure-voting-app-rust:v0.1-alpha
 ```
 
-```bash
-trivy --exemption-file=exemptions.yaml image --severity CRITICAL azure-voting-app-rust:v0.1-alpha
-```
-
 <details>
 <summary>Example Output</summary>
 
@@ -303,6 +365,122 @@ CVE-2019-8457
 
 </details>
 
+### Build the container images
+
+Next, you'll build the container images that will be used in this workshop.
+
+Run the following command to build the `azure-voting-app-rust` container image and push it to the Azure Container Registry:
+
+```bash
+az acr build --registry $ACR_NAME -t azure-voting-app-rust:v0.1-alpha .;
+
+# TODO: build the database container image and push to acr
+```
+
 ---
 
+
 ## Signing Container Images
+
+In this section, you'll use Notary to sign the `azure-voting-app-rust` container image. Notary is a tool that allows you to sign and verify container images.
+
+### Installing Notation
+
+Notation is a command line tool from the CNCF Notary project that allows you to sign and verify container images. Installing Notation is as simple as downloading the binary for your operating system. Browse to the [Notary Installation page](https://github.com/notaryproject/notation/releases). Download the binary for your operating system and add it to your `PATH` environment variable.
+
+<details>
+<summary>Install Notation on Linux</summary>
+
+```output
+# Download the binary
+curl -Lo notation.tar.gz https://github.com/notaryproject/notation/releases/download/v1.0.0-rc.4/notation_1.0.0-rc.4_linux_amd64.tar.gz
+
+# Extract the Notation CLI
+[ -d ~/bin ] || mkdir ~/bin
+tar xvzf notation.tar.gz -C ~/bin notation
+rm -rf notation.tar.gz
+
+# Add Notation to that PATH environment variable.
+export PATH="$HOME/bin:$PATH"
+notation version
+```
+
+<!-- TODO:Test on Windows -->
+</details>
+
+<details>
+<summary>Install Notation on Windows</summary>
+
+```output
+# Download the binary
+Invoke-WebRequest -Uri 'https://github.com/notaryproject/notation/releases/download/v1.0.0-rc.4/notation_1.0.0-rc.4_windows_amd64.zip' -OutFile 'notation_1.0.0-rc.4_windows_amd64.zip'
+
+
+# Extract the Notation CLI
+if(!(Test-Path ~/bin)) { New-Item -ItemType Directory -Path ~/bin | Out-Null }
+Expand-Archive ./notation_1.0.0-rc.4_windows_amd64.zip ~/bin
+Remove-Item ./notation_1.0.0-rc.4_windows_amd64.zip
+
+# Add Notation to that PATH environment variable.
+$env:PATH = "$($HOME)/bin;$($env:PATH)"
+notation version
+```
+
+</details>
+
+### Adding a key to Notary
+
+As part of the Terraform deployment, a self-signed certificate was created and stored in Azure Key Vault. You'll use this certificate to sign container images. The key identifier for the certificate is used to add the certificate to Notary with the `notation key add` command.
+
+Run the following `azcli` command to retrieve the key identifier for the certificate:
+
+```bash
+keyId=$(az keyvault certificate show --name $CERT_NAME --vault-name $KEYVAULT_NAME --query kid -o tsv)
+```
+
+Run the following command to add the certificate to Notary:
+
+```bash
+notation key add --key $keyId --name $CERT_NAME
+```
+
+To verify the key was added successfully, run the following command:
+
+```bash
+notation key list
+```
+
+### Creating an Azure Container Registry token
+
+In order to sign a container image, you'll need to create a token for the Azure Container Registry. This token will be used by the Notary CLI to authenticate with the Azure Container Registry and sign the container image.
+
+Run the following command to create a token for the Azure Container Registry:
+
+```bash
+tokenName=exampleToken
+tokenPassword=$(az acr token create \
+    --name $tokenName \
+    --registry $ACR_NAME \
+    --scope-map _repositories_admin \
+    --query 'credentials.passwords[0].value' \
+    --only-show-errors \
+    --output tsv)
+```
+
+### Signing the container image with Notation
+
+Now that you have a token for the Azure Container Registry, you can use Notation to sign the `azure-voting-app-rust` container image.
+
+Run the following command to sign the container image:
+
+```bash
+IMAGE=azure-voting-app-rust:v0.1-alpha
+
+notation sign --key $CERT_NAME $ACR_NAME.azurecr.io/$IMAGE -u $tokenName -p $tokenPassword
+
+# TODO: sign the database container image
+```
+
+### Redeploy the Azure Voting App
+
+Now that the container image is signed, you can redeploy the `azure-voting-app-rust` container image to your Azure Kubernetes Service cluster.
