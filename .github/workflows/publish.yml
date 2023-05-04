@@ -13,7 +13,7 @@ jobs:
         run: |
           docker build -t ${{ secrets.ACR_NAME }}/azure-voting-app-rust:${{ github.sha }} .
       - name: Aqua Security Trivy Scan
-        uses: aquasecurity/trivy-action@v1
+        uses: aquasecurity/trivy-action@0.10.0
         with:
           image-ref: ${{ secrets.ACR_NAME }}/azure-voting-app-rust:${{ github.sha }}
           format: table
