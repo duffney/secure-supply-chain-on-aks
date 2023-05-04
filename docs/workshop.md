@@ -148,7 +148,7 @@ azurerm_container_registry.acr: Creating...
 </details>
 
 
-<div class="info" data-title="Note">
+<div class="info" data-title="warning">
 
 > Certain Azure resources need to be globally unique. If you receive an error that a resource already exists, you may need to change the name of the resource in the `terraform.tfvars` file.
 
@@ -171,71 +171,21 @@ export TENANT_ID="$(terraform output -raw tenant_id)"
 export CLIENT_ID="$(terraform output -raw workload_identity_client_id)"
 ```
 
----
+### Enable the Web App Routing Addon
 
+Web app routing is used to expose the Azure Voting app to the internet. You'll need to enable the Web App Routing Addon on your cluster for the ingress of the Azure Voting app to work.
 
-## Deploy Gatekeeper and Ratify
-
-In this section, you'll deploy Gatekeeper and Ratify to your Azure Kubernetes Service cluster. Gatekeeper is an open-source project from the CNCF that allows you to enforce policies on your Kubernetes cluster. Ratify is a tool that allows you to deploy policies and constraints that prevent unsigned container image from being deployed to Kubernetes.
-
-### Get the Kubernetes credentials
-
-Run the following command to get the Kubernetes credentials for your cluster:
+Run the following command to enable the Web App Routing Addon on your cluster:
 
 ```bash
-az aks get-credentials --resource-group ${GROUP_NAME} --name ${AKS_NAME}
+az aks addon enable --name $AKS_NAME --resource-group $GROUP_NAME --addon web_application_routing
 ```
 
-### Deploy Gatekeeper
-
-Run the following command to deploy Gatekeeper to your cluster:
+Before continuing, change back to the root of this repository:
 
 ```bash
-helm repo add gatekeeper https://open-policy-agent.github.io/gatekeeper/charts
-
-helm install gatekeeper/gatekeeper  \
---name-template=gatekeeper \
---namespace gatekeeper-system --create-namespace \
---set enableExternalData=true \
---set validatingWebhookTimeoutSeconds=5 \
---set mutatingWebhookTimeoutSeconds=2
+cd ..
 ```
-
-### Deploy Ratify
-
-Run the following command to deploy Ratify to your cluster:
-
-```bash
-helm repo add ratify https://deislabs.github.io/ratify
-
-helm install ratify \
-    ratify/ratify --atomic \
-    --namespace gatekeeper-system \
-    --set akvCertConfig.enabled=true \
-    --set akvCertConfig.vaultURI=${VAULT_URI} \
-    --set akvCertConfig.cert1Name=${CERT_NAME} \
-    --set akvCertConfig.tenantId=${TENANT_ID} \
-    --set oras.authProviders.azureWorkloadIdentityEnabled=true \
-    --set azureWorkloadIdentity.clientId=${CLIENT_ID}
-```
-
-### Deploy Ratfiy policies
-
-Once Ratify is deployed, you'll need to deploy the policies and constraints that prevent unsigned container images from being deployed to Kubernetes.
-
-Run the following command to deploy the Ratify policies to your cluster:
-
-```bash
-kubectl apply -f https://deislabs.github.io/ratify/library/default/template.yaml
-kubectl apply -f https://deislabs.github.io/ratify/library/default/samples/constraint.yaml
-```
-
-### Deploy the netMonitor container image
-
-<!-- TODO 
-
-deploy the netMonitor container image to the cluster unsigned to show that it is blocked
--->
 
 ---
 
@@ -243,7 +193,7 @@ deploy the netMonitor container image to the cluster unsigned to show that it is
 
 Image scanning is a critical part of the container lifecycle. In this section, you'll use Trivy to scan a container image for vulnerabilities and secrets.
 
-### Build the container image
+### Build the Azure Voting App container image
 
 Within this repository, there is a `Dockerfile` that will build a container image that hosts the Azure Voting App. The Azure Voting App is a simple Rust application that allows users to vote on their favorite pet.
 
@@ -253,18 +203,27 @@ Run the following command to build the container image from the root of this rep
 docker build -t azure-voting-app-rust:v0.1-alpha .
 ```
 
+### Pull PostgreSQL container image from Docker Hub
+
+The Azure Voting App requires a PostgreSQL database to store the votes. Run the following command to pull the PostgreSQL container image from Docker Hub:
+
+```bash
+docker pull postgres:15.0-alpine
+```
+
 ### Download Trivy
 
 Installing Trivy is as simple as downloading the binary for your operating system. Browse to the [Trivy Installation page](https://aquasecurity.github.io/trivy/v0.40/getting-started/installation/) and download the binary for your operating system.
 
-### Use Trivy to scan for vulnerabilities and secrets
+### Use Trivy to scan for vulnerabilities
 
 Once you've downloaded Trivy, you can use it to scan container images for vulnerabilities.
 
 Run the following command to scan the `azure-voting-app-rust` container image for vulnerabilities:
 
 ```bash
-trivy image azure-voting-app-rust:v0.1-alpha
+trivy image azure-voting-app-rust:v0.1-alpha;
+trivy image postgres:15.0-alpine
 ```
 
 You can adjust the severity level of the vulnerabilities that Trivy reports by using the `--severity` flag. For example, to only report vulnerabilities that are `CRITICAL`, you would run the following command:
@@ -294,60 +253,12 @@ Total: 14 (CRITICAL: 14)
 
 </details>
 
-You'll notice from the output that Trivy reports 14 vulnerabilities, all of which are `CRITICAL`. 
 
-### Update the second stage of the Dockerfile
+<div class="info" data-title="note">
 
-The `azure-voting-app-rust` container image is built in two stages. The first stage builds the application and the second stage copies the application into a new container image. The second stage is where the vulnerabilities are introduced because it's using an outdated base image.
+> Outdated container images are a common source of vulnerabilities. Besure to regularly update your container images to the latest version.
 
-Open the `Dockerfile` in your favorite editor and update the second stage to use the `debian:bullseye-20230411` base image.
-
-```dockerfile
-###############
-## run stage ##
-###############
-FROM debian:bullseye-20230411
-```
-
-Rebuild the container image with the updated `Dockerfile`:
-
-```bash
-docker build -t azure-voting-app-rust:v0.1-alpha .
-```
-
-Next, clear the Trivy cache and scan the updated container image:
-
-```bash
-trivy image --clear-cache;
-trivy image --severity CRITICAL azure-voting-app-rust:v0.1-alpha
-```
-
-<details>
-<summary>Example Output</summary>
-
-```output
-2023-04-28T10:17:05.643-0500    INFO    Vulnerability scanning is enabled
-2023-04-28T10:17:05.643-0500    INFO    Secret scanning is enabled
-2023-04-28T10:17:05.643-0500    INFO    If your scanning is slow, please try '--scanners vuln' to disable secret scanning
-2023-04-28T10:17:05.643-0500    INFO    Please see also https://aquasecurity.github.io/trivy/v0.40/docs/secret/scanning/#recommendation for faster secret detection
-2023-04-28T10:17:08.867-0500    INFO    Detected OS: debian
-2023-04-28T10:17:08.867-0500    INFO    Detecting Debian vulnerabilities...
-2023-04-28T10:17:08.891-0500    INFO    Number of language-specific files: 0
-
-azure-voting-app-rust:v0.1-alpha (debian 11.6)
-
-Total: 1 (CRITICAL: 1)
-
-┌──────────┬───────────────┬──────────┬───────────────────┬───────────────┬────────────────────────────────────────────────────────┐
-│ Library  │ Vulnerability │ Severity │ Installed Version │ Fixed Version │                         Title                          │
-├──────────┼───────────────┼──────────┼───────────────────┼───────────────┼────────────────────────────────────────────────────────┤
-│ libdb5.3 │ CVE-2019-8457 │ CRITICAL │ 5.3.28+dfsg1-0.8  │               │ sqlite: heap out-of-bound read in function rtreenode() │
-│          │               │          │                   │               │ https://avd.aquasec.com/nvd/cve-2019-8457              │
-└──────────┴───────────────┴──────────┴───────────────────┴───────────────┴────────────────────────────────────────────────────────┘
-```
-
-</details>
-
+</div>
 
 ### Adding exemptions for vulnerabilities
 
@@ -365,24 +276,43 @@ CVE-2019-8457
 
 </details>
 
-### Build the container images
+Run the following command to scan the `azure-voting-app-rust` container image for vulnerabilities and ignore the CVEs listed in the `.trivyignore` file:
+
+```bash
+trivy image azure-voting-app-rust:v0.1-alpha
+```
+
+Notice that the vulnerabilities listed in the `.trivyignore` file are no longer reported.
+
+### Build and push the container images to Azure Container Registry
 
 Next, you'll build the container images that will be used in this workshop.
 
 Run the following command to build the `azure-voting-app-rust` container image and push it to the Azure Container Registry:
 
 ```bash
-az acr build --registry $ACR_NAME -t azure-voting-app-rust:v0.1-alpha .;
-
-# TODO: build the database container image and push to acr
+az acr build --registry $ACR_NAME -t azure-voting-app-rust:v0.1-alpha .
 ```
+
+Run the following command to build the `postgres` container image and push it to the Azure Container Registry:
+
+```bash
+docker tag postgres:15.0-alpine $ACR_NAME.azurecr.io/postgres:15.0-alpine
+docker push $ACR_NAME.azurecr.io/postgres:15.0-alpine
+```
+
+<div class="info" data-title="note">
+
+> If you encounter an authentication error, run `az acr login --name $ACR_NAME` command to authenticate to the Azure Container Registry then try the `docker push` command again.
+
+</div>
+
 
 ---
 
-
 ## Signing Container Images
 
-In this section, you'll use Notary to sign the `azure-voting-app-rust` container image. Notary is a tool that allows you to sign and verify container images.
+In this section, you'll use Notary to sign the `azure-voting-app-rust` and `postgres:15.0-alpine` container images. Notary is a CNCF project that provides a way to digitally sign container images. You'll use Notary's command line tool, Notation, to sign and verify container images.
 
 ### Installing Notation
 
@@ -441,7 +371,7 @@ keyId=$(az keyvault certificate show --name $CERT_NAME --vault-name $KEYVAULT_NA
 Run the following command to add the certificate to Notary:
 
 ```bash
-notation key add --key $keyId --name $CERT_NAME
+notation key add --plugin azure-kv $CERT_NAME --id $keyId
 ```
 
 To verify the key was added successfully, run the following command:
@@ -469,18 +399,109 @@ tokenPassword=$(az acr token create \
 
 ### Signing the container image with Notation
 
-Now that you have a token for the Azure Container Registry, you can use Notation to sign the `azure-voting-app-rust` container image.
+Now that you have a token for the Azure Container Registry, you can use Notation to sign the `azure-voting-app-rust` and `postgres:15.0-alpine` container images.
 
 Run the following command to sign the container image:
 
 ```bash
-IMAGE=azure-voting-app-rust:v0.1-alpha
+notation sign --key $CERT_NAME $ACR_NAME.azurecr.io/azure-voting-app-rust:v0.1-alpha -u $tokenName -p $tokenPassword
 
-notation sign --key $CERT_NAME $ACR_NAME.azurecr.io/$IMAGE -u $tokenName -p $tokenPassword
-
-# TODO: sign the database container image
+notation sign --key $CERT_NAME $ACR_NAME.azurecr.io/postgres:15.0-alpine -u $tokenName -p $tokenPassword
 ```
 
-### Redeploy the Azure Voting App
+---
 
-Now that the container image is signed, you can redeploy the `azure-voting-app-rust` container image to your Azure Kubernetes Service cluster.
+## Deploy Gatekeeper and Ratify
+
+In this section, you'll deploy Gatekeeper and Ratify to your Azure Kubernetes Service cluster. Gatekeeper is an open-source project from the CNCF that allows you to enforce policies on your Kubernetes cluster. Ratify is a tool that allows you to deploy policies and constraints that prevent unsigned container image from being deployed to Kubernetes.
+
+### Get the Kubernetes credentials
+
+Run the following command to get the Kubernetes credentials for your cluster:
+
+```bash
+az aks get-credentials --resource-group ${GROUP_NAME} --name ${AKS_NAME}
+```
+
+### Deploy Gatekeeper
+
+Run the following command to deploy Gatekeeper to your cluster:
+
+```bash
+helm repo add gatekeeper https://open-policy-agent.github.io/gatekeeper/charts
+
+helm install gatekeeper/gatekeeper  \
+--name-template=gatekeeper \
+--namespace gatekeeper-system --create-namespace \
+--set enableExternalData=true \
+--set validatingWebhookTimeoutSeconds=5 \
+--set mutatingWebhookTimeoutSeconds=2
+```
+
+### Deploy Ratify
+
+Run the following command to deploy Ratify to your cluster:
+
+```bash
+helm repo add ratify https://deislabs.github.io/ratify
+
+helm install ratify \
+    ratify/ratify --atomic \
+    --namespace gatekeeper-system \
+    --set akvCertConfig.enabled=true \
+    --set akvCertConfig.vaultURI=${VAULT_URI} \
+    --set akvCertConfig.cert1Name=${CERT_NAME} \
+    --set akvCertConfig.tenantId=${TENANT_ID} \
+    --set oras.authProviders.azureWorkloadIdentityEnabled=true \
+    --set azureWorkloadIdentity.clientId=${CLIENT_ID}
+```
+
+### Deploy Ratfiy policies
+
+Once Ratify is deployed, you'll need to deploy the policies and constraints that prevent unsigned container images from being deployed to Kubernetes.
+
+Run the following command to deploy the Ratify policies to your cluster:
+
+```bash
+kubectl apply -f https://deislabs.github.io/ratify/library/default/template.yaml
+kubectl apply -f https://deislabs.github.io/ratify/library/default/samples/constraint.yaml
+```
+
+---
+
+## Deploy the Azure Voting App
+
+Now that the container images are signed, you can redeploy the Azure Voting app to your cluster.
+
+Open the `deployment-app.yml` and `deployment-db.yml` files in the `azure-voting-app-rust` directory. Replace the `image` property with the fully qualified name of the container image in your Azure Container Registry.
+
+<details>
+<summary>deployment-app.yml</summary>
+
+```yaml
+    spec:
+      containers:
+      - image: exampleacr12345678.azurecr.io/azure-voting-app-rust:v0.1-alpha
+        name: azure-voting-app-rust
+```
+
+</details>
+
+<details>
+<summary>deployment-db.yml</summary>
+
+```yaml
+    spec:
+      containers:
+      - image: exampleacr12345678.azurecr.io/postgres:15.0-alpine
+        name: postgres
+```
+
+</details>
+
+Run the following command to deploy the Azure Voting app to your cluster:
+
+```bash
+cd manifest
+kubectl apply -f .
+```
