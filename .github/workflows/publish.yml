@@ -1,4 +1,4 @@
-name: build and publish
+name: Build and Publish
 on:
   push:
     branches:
@@ -7,13 +7,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout
-      - uses: actions/checkout@v2
-      - name: build an image from Dockerfile
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Build Docker Image
         run: |
           docker build -t ${{ secrets.ACR_NAME }}/azure-voting-app-rust:${{ github.sha }} .
-      - name: Aqua Security Trivy
-        uses: aquasecurity/trivy-action@0.10.0
+      - name: Aqua Security Trivy Scan
+        uses: aquasecurity/trivy-action@v1
         with:
           image-ref: ${{ secrets.ACR_NAME }}/azure-voting-app-rust:${{ github.sha }}
           format: table
