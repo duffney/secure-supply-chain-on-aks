@@ -1,0 +1,23 @@
+name: build and publish
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+      - uses: actions/checkout@v2
+      - name: build an image from Dockerfile
+        run: |
+          docker build -t ${{ secrets.ACR_NAME }}/azure-voting-app-rust:${{ github.sha }} .
+      - name: Aqua Security Trivy
+        uses: aquasecurity/trivy-action@0.10.0
+        with:
+          image-ref: ${{ secrets.ACR_NAME }}/azure-voting-app-rust:${{ github.sha }}
+          format: table
+          vuln-type: os
+          exit-code: 1
+          ignore-unfixed: true
+          severity: CRITICAL
