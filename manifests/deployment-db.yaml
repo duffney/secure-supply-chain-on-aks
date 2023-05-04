@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: azure-voting-db
+  name: azure-voting-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: azure-voting-db
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: azure-voting-db
+    spec:
+      containers:
+      - image: exampleacr12345678.azurecr.io/postgres:15.0-alpine
+        name: postgres
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_PASSWORD
+          value: "mypassword"
+        resources: {}
+status: {}
