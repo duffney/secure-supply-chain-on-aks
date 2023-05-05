@@ -505,3 +505,9 @@ Run the following command to deploy the Azure Voting app to your cluster:
 cd manifest
 kubectl apply -f .
 ```
+
+---
+
+## Build a CI CD Pipeline with GitHub Actions
+
+In this section, you'll build a CI/CD pipeline with GitHub Actions that will build, scan, sign, and deploy the Azure Voting app to your Azure Kubernetes Service cluster.
