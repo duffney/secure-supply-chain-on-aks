@@ -4,7 +4,7 @@ on:
     branches:
       - main
 env:
-  ACR_LOGIN_SERVER: exampleacr12345678.azurecr.io
+  ACR_NAME: exampleacr12345678
   CERT_NAME: ratify
 jobs:
   build:
@@ -14,11 +14,11 @@ jobs:
         uses: actions/checkout@v2
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/azure-voting-app-rust:${{ github.sha }} .
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} .
       - name: Aqua Security Trivy Scan
         uses: aquasecurity/trivy-action@0.10.0
         with:
-          image-ref: ${{ secrets.ACR_LOGIN_SERVER }}/azure-voting-app-rust:${{ github.sha }}
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
           format: table
           vuln-type: os
           exit-code: 1
@@ -30,20 +30,7 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Login to Azure Container Registry
         run: |
-          az acr login --name ${{ secrets.ACR_LOGIN_SERVER }}
+          az acr login --name ${{ env.ACR_NAME }}
       - name: Push Docker Image
         run: |
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/azure-voting-app-rust:${{ github.sha }}
-      - name: Get Signing Key ID
-        id: signingKeyId
-        run: |
-          ACR_NAME=$(echo $ACR_LOGIN_SERVER | cut -d. -f1)
-
-          keyID=$(az keyvault certificate show \
-          --vault-name $ACR_NAME --name ${{ env.CERT_NAME }} \
-          --query "kid" --only-show-errors --output tsv)
-
-          echo "SIGN_CERT_KEY_ID=${keyID}" >> $GITHUB_OUTPUT
-      - name: Echo Signing Key Id
-        run: |
-          echo ${{ steps.signingKeyId.outputs.SIGN_CERT_KEY_ID }}
+          docker push ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
