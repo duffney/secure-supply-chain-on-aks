@@ -35,14 +35,15 @@ jobs:
       - name: Push Docker Image
         run: |
           docker push ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
-      - name: Get Signing Key ID
-        id: signingKeyId
+      - name: Setup Notation with azure-kv plugin
+        uses: Duffney/setup-notation@v1.0.0
+        with:
+          key_name: ${{ env.CERT_NAME }}
+          certificate_key_id: ${{ secrets.SIGN_CERT_KEY_ID }}
+          plugin_name: notation-azure-kv
+          plugin_version: 0.5.0-rc.1
+      - name: Sign Container Image
         run: |
-          keyID=$(az keyvault certificate show \
-          --vault-name ${{ env.AKV_NAME}} --name ${{ env.CERT_NAME }} \
-          --query "kid" --only-show-errors --output tsv)
-
-          echo "SIGN_CERT_KEY_ID=${keyID}" >> $GITHUB_OUTPUT
-      - name: Echo Signing Key Id
-        run: |
-          echo ${{ steps.signingKeyId.outputs.SIGN_CERT_KEY_ID }}
+          notation sign --key ${{ env.CERT_NAME }} ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} \
+          -u ${{ secrets.TOKEN_USERNAME }} \
+          -p ${{ secrets.TOKEN_PASSWORD }} 
