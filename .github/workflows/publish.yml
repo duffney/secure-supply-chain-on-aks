@@ -7,10 +7,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Checkout Code
         uses: actions/checkout@v2
       - name: Build Docker Image
@@ -25,3 +21,13 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
           severity: CRITICAL
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ secrets.ACR_NAME }}
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.ACR_NAME }}/azure-voting-app-rust:${{ github.sha }}
