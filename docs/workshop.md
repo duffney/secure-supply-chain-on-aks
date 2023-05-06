@@ -358,6 +358,23 @@ notation version
 
 </details>
 
+### Install the Azure Key Vault plugin for Notation
+
+Notation supports a number of different key management systems. In this workshop, you'll use Azure Key Vault to store the keys used to sign container images. To use Azure Key Vault with Notation, you'll need to install the Azure Key Vault plugin for Notation.
+
+<!-- TODO add windows install -->
+
+Run the following command to install the Azure Key Vault plugin for Notation:
+
+```bash
+curl -Lo notation-azure-kv.tar.gz \
+https://github.com/Azure/notation-azure-kv/releases/download/v0.5.0-rc.1/notation-azure-kv_0.5.0-rc.1_Linux_amd64.tar.gz
+
+[ -d ~/.config/notation/plugins/azure-kv ] || mkdir -p ~/.config/notation/plugins/azure-kv
+tar xvzf notation-azure-kv.tar.gz -C ~/.config/notation/plugins/azure-kv notation-azure-kv > /dev/null 2>&1
+rm -rf notation-azure-kv.tar.gz
+```
+
 ### Adding a key to Notary
 
 As part of the Terraform deployment, a self-signed certificate was created and stored in Azure Key Vault. You'll use this certificate to sign container images. The key identifier for the certificate is used to add the certificate to Notary with the `notation key add` command.
