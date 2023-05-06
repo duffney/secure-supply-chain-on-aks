@@ -47,4 +47,4 @@ jobs:
         run: |
           notation sign --key ${{ env.CERT_NAME }} ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} \
           -u ${{ secrets.TOKEN_USERNAME }} \
-          -p ${{ secrets.TOKEN_PASSWORD }}
+          -p ${{ secrets.TOKEN_PASSWORD }} 
