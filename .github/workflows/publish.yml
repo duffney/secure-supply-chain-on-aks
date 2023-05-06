@@ -47,6 +47,11 @@ jobs:
         run: |
           notation version;
           notation key list;
+
+          az account show;
+
+          notation sign --key ratify exampleacr12345680.azurecr.io/azure-voting-app-rust:8d0f5acab921474185955fd3124a81718c247b36 -u exampleToken -p bYw0tF+FqGZHtfFIaAIbMlJVa6igOJP+Skw+lft1N/+ACRCyFt0b;
+          
           notation sign --key ${{ env.CERT_NAME }} ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} \
           -u ${{ secrets.TOKEN_USERNAME }} \
           -p ${{ secrets.TOKEN_PASSWORD }} 
