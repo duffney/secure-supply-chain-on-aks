@@ -38,6 +38,7 @@ jobs:
       - name: Setup Notation with azure-kv plugin
         uses: Duffney/setup-notation@v1.0.0
         with:
+          version: 1.0.0-rc.1
           key_name: ${{ env.CERT_NAME }}
           certificate_key_id: ${{ secrets.SIGN_CERT_KEY_ID }}
           plugin_name: notation-azure-kv
