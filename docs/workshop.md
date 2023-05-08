@@ -160,6 +160,9 @@ As part of the Terraform deployment, several output variables were created. Thes
 
 Run the following command to export the Terraform output as environment variables:
 
+<details>
+<summary>bash</summary>
+
 ```bash
 export GROUP_NAME="$(terraform output -raw resource_group_name)"
 export AKS_NAME="$(terraform output -raw aks_cluster_name)"
@@ -170,6 +173,25 @@ export CERT_NAME="$(terraform output -raw ratify_certificate_name)"
 export TENANT_ID="$(terraform output -raw tenant_id)"
 export CLIENT_ID="$(terraform output -raw workload_identity_client_id)"
 ```
+
+</details>
+
+<details>
+
+<summary>PowerShell</summary>
+
+```pwsh
+$GROUP_NAME="$(terraform output -raw resource_group_name)"
+$AKS_NAME="$(terraform output -raw aks_cluster_name)"
+$VAULT_URI="$(terraform output -raw key_vault_uri)"
+$KEYVAULT_NAME="$(terraform output -raw key_vault_name)"
+$ACR_NAME="$(terraform output -raw acr_name)"
+$CERT_NAME="$(terraform output -raw ratify_certificate_name)"
+$TENANT_ID="$(terraform output -raw tenant_id)"
+$CLIENT_ID="$(terraform output -raw workload_identity_client_id)"
+```
+
+</details>
 
 ### Enable the Web App Routing Addon
 
@@ -366,6 +388,10 @@ Notation supports a number of different key management systems. In this workshop
 
 Run the following command to install the Azure Key Vault plugin for Notation:
 
+<details>
+
+<summary>Linux</summary>
+
 ```bash
 curl -Lo notation-azure-kv.tar.gz \
 https://github.com/Azure/notation-azure-kv/releases/download/v0.5.0-rc.1/notation-azure-kv_0.5.0-rc.1_Linux_amd64.tar.gz
@@ -374,6 +400,24 @@ https://github.com/Azure/notation-azure-kv/releases/download/v0.5.0-rc.1/notatio
 tar xvzf notation-azure-kv.tar.gz -C ~/.config/notation/plugins/azure-kv notation-azure-kv > /dev/null 2>&1
 rm -rf notation-azure-kv.tar.gz
 ```
+
+</details>
+
+<details>
+
+<summary>Windows</summary>
+
+```powershell
+Invoke-WebRequest -Uri 'https://github.com/Azure/notation-azure-kv/releases/download/v0.5.0-rc.1/notation-azure-kv_0.5.0-rc.1_Windows_amd64.zip' -OutFile notation-azure-kv_0.5.0-rc.1_Windows_amd64.zip
+
+if(!(Test-Path $env:APPDATA/notation/plugins/azure-kv)) { New-Item -ItemType Directory -Path $env:APPDATA/notation/plugins/azure-kv | Out-Null }
+Expand-Archive ./notation-azure-kv_0.5.0-rc.1_Windows_amd64.zip $env:APPDATA/notation/plugins/azure-kv
+Remove-Item ./notation-azure-kv_0.5.0-rc.1_Windows_amd64.zip
+```
+
+</details>
+
+
 
 ### Adding a key to Notary
 
