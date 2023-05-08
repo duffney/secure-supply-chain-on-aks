@@ -1,0 +1,73 @@
+name: Build-Publish-Deploy
+on:
+  push:
+    branches:
+      - main
+env:
+  RG_NAME: example-resource-group
+  ACR_NAME: exampleacr12345678
+  AKV_NAME: examplekeyvault12345678
+  AKS_NAME: example-cluster
+  CERT_NAME: ratify
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} .
+      - name: Aqua Security Trivy Scan
+        uses: aquasecurity/trivy-action@0.10.0
+        with:
+          image-ref: ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
+          format: table
+          vuln-type: os
+          exit-code: 1
+          ignore-unfixed: true
+          severity: CRITICAL
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+      - name: Push Docker Image
+        run: |
+          docker push ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
+      - name: Setup Notation with azure-kv plugin
+        uses: Duffney/setup-notation@v1.0.0
+        with:
+          version: 1.0.0-rc.4
+          key_name: ${{ env.CERT_NAME }}
+          certificate_key_id: ${{ secrets.SIGN_CERT_KEY_ID }}
+          plugin_name: notation-azure-kv
+          plugin_version: 0.5.0-rc.1
+      - name: Sign Container Image
+        run: |
+          notation sign --key ${{ env.CERT_NAME }} ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} \
+          -u ${{ secrets.TOKEN_USERNAME }} \
+          -p ${{ secrets.TOKEN_PASSWORD }}
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials --resource-group ${{ env.RG_NAME }} --name ${{ env.AKS_NAME }}
+      - name: Replace Image in Kubernetes Manifest
+        run: |
+          sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g;s/v0.1-alpha/${{ github.sha }}/g' deployment-app.yaml;
+          sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g;s/15.0-alpine/${{ github.sha }}/g' deployment-db.yaml
+        working-directory: ./manifests
+      - name: Apply Kubernetes Configuration
+        run: |
+          kubectl apply -f manifests/
