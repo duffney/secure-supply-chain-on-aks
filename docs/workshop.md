@@ -608,7 +608,7 @@ echo $tokenPassword
 
 ## Modify the GitHub Actions workflow
 
-Within the `.github/workflows/build.yml` file, you'll find a GitHub Actions workflow that builds, scans, signs, and deploys the Azure Voting app to your Azure Kubernetes Service cluster.
+Within the `.github/workflows/main.yml` file, you'll find a GitHub Actions workflow that builds, scans, signs, and deploys the Azure Voting app to your Azure Kubernetes Service cluster.
 
 Take a moment to review the workflow and familiarize yourself with the steps.
 
@@ -620,7 +620,7 @@ In order for the workflow to work for your environment, you'll need to modify th
 - `AKS_NAME` - The name of your Azure Kubernetes Service cluster
 - `CERT_NAME` - The name of your signing certificate
 
-Open the `.github/workflows/build.yml` file and replace the above environment variables with the values for your environment.
+Open the `.github/workflows/main.yml` file and replace the above environment variables with the values for your environment.
 
 <details>
 
@@ -645,7 +645,7 @@ If you've been following along with this workshop, you'll likely have to update 
 
 ```yaml
 sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g;s/v0.1-alpha/${{ github.sha }}/g' deployment-app.yaml
-sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g;s/15.0-alpine/${{ github.sha }}/g' deployment-db.yaml
+sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g' deployment-db.yaml
 ```
 
 Replace `exampleacr12345678` with the name of your Azure Container Registry.
