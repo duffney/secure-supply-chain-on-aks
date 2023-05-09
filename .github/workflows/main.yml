@@ -2,12 +2,12 @@ name: Build-Publish-Deploy
 on:
   push:
     branches:
-      - main
+      - BRK264H 
 env:
-  RG_NAME: example-resource-group
-  ACR_NAME: exampleacr12345678
-  AKV_NAME: examplekeyvault12345678
-  AKS_NAME: example-cluster
+  RG_NAME: brk264h-rg
+  ACR_NAME: brk264hacr
+  AKV_NAME: brk264h-kv
+  AKS_NAME: brk264h-cluster
   CERT_NAME: ratify
 jobs:
   build:
@@ -30,7 +30,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDS }}
       - name: Login to Azure Container Registry
         run: |
           az acr login --name ${{ env.ACR_NAME }}
@@ -42,14 +42,14 @@ jobs:
         with:
           version: 1.0.0-rc.4
           key_name: ${{ env.CERT_NAME }}
-          certificate_key_id: ${{ secrets.SIGN_CERT_KEY_ID }}
+          certificate_key_id: ${{ secrets.NOTATION_SIGN_CERT_KEY_ID }}
           plugin_name: notation-azure-kv
           plugin_version: 0.5.0-rc.1
       - name: Sign Container Image
         run: |
           notation sign --key ${{ env.CERT_NAME }} ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} \
-          -u ${{ secrets.TOKEN_USERNAME }} \
-          -p ${{ secrets.TOKEN_PASSWORD }}
+          -u ${{ secrets.NOTATION_USERNAME }} \
+          -p ${{ secrets.NOTATION_PASSWORD }}
   deploy:
     runs-on: ubuntu-latest
     needs: build
@@ -59,15 +59,14 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDS }}
       - name: Get AKS Credentials
         run: |
           az aks get-credentials --resource-group ${{ env.RG_NAME }} --name ${{ env.AKS_NAME }}
       - name: Replace Image in Kubernetes Manifest
         run: |
-          sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g;s/v0.1-alpha/${{ github.sha }}/g' deployment-app.yaml;
-          sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g' deployment-db.yaml
-          cat deployment-db.yaml
+          sed -i 's/registryName/${{ env.ACR_NAME }}/g;s/v0.1-alpha/${{ github.sha }}/g' deployment-app.yaml;
+          sed -i 's/registryName/${{ env.ACR_NAME }}/g' deployment-db.yaml
         working-directory: ./manifests
       - name: Apply Kubernetes Configuration
         run: |
