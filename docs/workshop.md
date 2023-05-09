@@ -4,7 +4,7 @@ description: Learn how to use open-source tools to secure your container deploym
 type: workshop
 authors: Josh Duffney 
 contacts: '@joshduffney'
-banner_url: assets/copilot-banner.jpg
+# banner_url: assets/copilot-banner.jpg
 duration_minutes: 45
 audience: devops engineers, devs, site reliability engineers, security engineers
 level: intermediate
@@ -357,7 +357,6 @@ export PATH="$HOME/bin:$PATH"
 notation version
 ```
 
-<!-- TODO:Test on Windows -->
 </details>
 
 <details>
@@ -383,8 +382,6 @@ notation version
 ### Install the Azure Key Vault plugin for Notation
 
 Notation supports a number of different key management systems. In this workshop, you'll use Azure Key Vault to store the keys used to sign container images. To use Azure Key Vault with Notation, you'll need to install the Azure Key Vault plugin for Notation.
-
-<!-- TODO add windows install -->
 
 Run the following command to install the Azure Key Vault plugin for Notation:
 
@@ -615,7 +612,8 @@ Next, you'll need to create an access policy for the Service Principal that gran
 Run the following command to create an access policy for the Service Principal:
 
 ```bash
-az keyvault set-policy --name $KEYVAULT_NAME --application-id $CLIENT_ID --key-permissions sign --secret-permissions get
+objectId=${az ad sp list --display-name azure-voting-app-rust-sdk --query '[].id' --output tsv}
+az keyvault set-policy --name $KEYVAULT_NAME --object-id $objectId --key-permissions sign --secret-permissions get
 ```
 
 ### Create the AZURE_CREDENTIALS secret
