@@ -84,70 +84,6 @@ resource "azurerm_key_vault_access_policy" "workload-identity" {
   ]
 }
 
-# resource "azurerm_key_vault_access_policy" "current-user" {
-#   key_vault_id = azurerm_key_vault.kv.id
-#   tenant_id    = data.azurerm_client_config.current.tenant_id
-#   object_id    = data.azuread_client_config.current.object_id
-
-#   key_permissions = [
-#     "Get", "Sign"
-#   ]
-
-#   secret_permissions = [
-#     "Get", "Set", "List", "Delete", "Purge"
-#   ]
-
-#   certificate_permissions = [
-#     "Get", "Create", "Delete", "Purge"
-#   ]
-# }
-
-# resource "azurerm_key_vault_certificate" "ratify-cert" {
-#   name         = "ratify-cert"
-#   key_vault_id = azurerm_key_vault.kv.id
-
-#   certificate_policy {
-#     issuer_parameters {
-#       name = "Self"
-#     }
-
-#     key_properties {
-#       exportable = true
-#       key_size   = 2048
-#       key_type   = "RSA"
-#       reuse_key  = true
-#     }
-
-#     lifetime_action {
-#       action {
-#         action_type = "AutoRenew"
-#       }
-
-#       trigger {
-#         lifetime_percentage = 80
-#       }
-#     }
-
-#     secret_properties {
-#       content_type = "application/x-pkcs12"
-#     }
-
-#     x509_certificate_properties {
-#       extended_key_usage = [
-#         "1.3.6.1.5.5.7.3.1",
-#         "1.3.6.1.5.5.7.3.2"
-#       ]
-
-#       key_usage = [
-#         "digitalSignature",
-#         "keyEncipherment"
-#       ]
-
-#       subject            = "CN=example.com"
-#       validity_in_months = 12
-#     }
-#   }
-# }
 
 resource "azurerm_kubernetes_cluster" "aks" {
   name                      = var.cluster_name
@@ -166,10 +102,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   identity {
     type = "SystemAssigned"
-    # type = "UserAssigned"
-    # identity_ids = [
-    #   azurerm_user_assigned_identity.identity.id
-    # ]
   }
 
   tags = var.tags
