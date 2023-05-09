@@ -66,7 +66,7 @@ jobs:
       - name: Replace Image in Kubernetes Manifest
         run: |
           sed -i 's/brk264hacr/${{ env.ACR_NAME }}/g;s/v0.1-alpha/${{ github.sha }}/g' deployment-app.yaml;
-          sed -i 's/postgres/${{ env.ACR_NAME }}.azurecr.io/g' deployment-db.yaml
+          sed -i 's/postgres:15.0-alpine/${{ env.ACR_NAME }}.azurecr.io\/postgres:15.0-alpine/g' deployment-db.yaml
         working-directory: ./manifests
       - name: Apply Kubernetes Configuration
         run: |
