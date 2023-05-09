@@ -1,9 +1,9 @@
-registry_name = "exampleacr12345678"
-key_vault_name = "examplekeyvault12345678"
-identity_name = "example-identity"
-resource_group_name = "example-resource-group"
-cluster_name = "example-cluster"
+registry_name = "brk264hacr"
+key_vault_name = "brk264h-kv"
+identity_name = "ratify-workload-identity"
+resource_group_name = "brk264h-rg"
+cluster_name = "brk264h-cluster"
 tags = {
-  environment = "dev"
-  department = "engineering"
+  environment = "breakout"
+  department = "msftbuild"
 }
