@@ -1,4 +1,4 @@
-# 🔑 Securing Container Deployments on AKS with Open Source Tools​
+# 🔑 Securing container deployments on AKS by using open-source tools​
 
 Learn how to use open-source tools to secure your container deployments on Azure Kubernetes Service.
 
