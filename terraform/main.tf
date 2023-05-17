@@ -96,8 +96,12 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   default_node_pool {
     name       = "default"
-    node_count = 2
+    node_count = 3
     vm_size    = "Standard_D2_v2"
+  }
+
+  web_app_routing {
+    dns_zone_id = ""
   }
 
 
