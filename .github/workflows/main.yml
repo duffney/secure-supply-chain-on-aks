@@ -52,6 +52,7 @@ jobs:
           pushd ./bin
           sudo nohup ./buildkitd &
           popd
+          sleep 5
           sudo ./copa patch -i ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}-patched
       - name: Push Docker Image
         run: |
