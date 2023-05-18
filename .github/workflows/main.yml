@@ -50,7 +50,7 @@ jobs:
           download https://github.com/project-copacetic/copacetic/releases/download/v0.2.0/copa_0.2.0_linux_amd64.tar.gz copa_0.2.0_linux_amd64.tar.gz
           download https://github.com/moby/buildkit/releases/download/v0.11.6/buildkit-v0.11.6.linux-amd64.tar.gz buildkit-v0.11.6.linux-amd64.tar.gz
           pushd ./bin
-          sudo ./buildkitd &
+          sudo nohup ./buildkitd &
           popd
           sudo ./copa patch -i ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}-patched
       - name: Push Docker Image
