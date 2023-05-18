@@ -27,11 +27,7 @@ jobs:
           vuln-type: os
           exit-code: 0
           ignore-unfixed: true
-          severity: CRITICAL
-      - name: debug
-        run: |
-          ls
-          cat patch.json
+          severity: CRITICAL,HIGH
       - name: Login to Azure
         uses: azure/login@v1
         with:
@@ -56,8 +52,7 @@ jobs:
           pushd ./bin
           sudo ./buildkitd &
           popd
-          sudo ./copa patch -i ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}-patched 
-          # sudo pkill buildkitd
+          sudo ./copa patch -i ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}-patched
       - name: Push Docker Image
         run: |
           docker push ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
