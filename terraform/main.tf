@@ -46,6 +46,7 @@ resource "azurerm_role_assignment" "acr" {
   scope                = azurerm_container_registry.registry.id
   role_definition_name = "AcrPull"
   principal_id         = azurerm_user_assigned_identity.identity.principal_id
+  anonymous_pull_enabled = true
 }
 
 resource "azurerm_key_vault" "kv" {
