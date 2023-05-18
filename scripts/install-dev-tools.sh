@@ -1,5 +1,5 @@
 curl -L -o trivy_0.41.0_Linux-64bit.tar.gz https://github.com/aquasecurity/trivy/releases/download/v0.41.0/trivy_0.41.0_Linux-64bit.tar.gz;
-tar -xzf trivy_0.41.0_Linux-64bit.tar.gz;
+tar -xzf trivy_0.41.0_Linux-64bit.tar.gz trivy;
 rm trivy_0.41.0_Linux-64bit.tar.gz;
 curl -L -o copa_0.2.0_linux_amd64.tar.gz https://github.com/project-copacetic/copacetic/releases/download/v0.2.0/copa_0.2.0_linux_amd64.tar.gz;
 tar -xzf copa_0.2.0_linux_amd64.tar.gz copa;
