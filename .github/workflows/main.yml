@@ -22,9 +22,10 @@ jobs:
         uses: aquasecurity/trivy-action@0.10.0
         with:
           image-ref: ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
-          format: table
+          format: json
+          output: patch.json
           vuln-type: os
-          exit-code: 1
+          exit-code: 0
           ignore-unfixed: true
           severity: CRITICAL
       - name: Login to Azure
@@ -37,6 +38,25 @@ jobs:
       - name: Push Docker Image
         run: |
           docker push ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
+      - name: Patch with Copacetic
+        run: |
+          function download() {
+            DOWNLOAD_URL=$1
+            DOWNLOAD_FILE=$2
+            curl -L -o $DOWNLOAD_FILE $DOWNLOAD_URL
+            tar -xzf $DOWNLOAD_FILE
+            rm $DOWNLOAD_FILE
+          }
+          download https://github.com/project-copacetic/copacetic/releases/download/v0.2.0/copa_0.2.0_linux_amd64.tar.gz copa_0.2.0_linux_amd64.tar.gz
+          download https://github.com/moby/buildkit/releases/download/v0.11.6/buildkit-v0.11.6.linux-amd64.tar.gz buildkit-v0.11.6.linux-amd64.tar.gz
+          pushd ./bin
+          sudo ./buildkitd &
+          popd
+          sudo ./copa patch -i ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r ./patch.json -t ${{ github.sha }}-patched
+          sudo pkill buildkitd
+      - name: Push Docker Image
+        run: |
+          docker push ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
       - name: Setup Notation with azure-kv plugin
         uses: Duffney/setup-notation@v1.0.0
         with:
@@ -47,7 +67,7 @@ jobs:
           plugin_version: 0.5.0-rc.1
       - name: Sign Container Image
         run: |
-          notation sign --key ${{ env.CERT_NAME }} ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} \
+          notation sign --key ${{ env.CERT_NAME }} ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched \
           -u ${{ secrets.NOTATION_USERNAME }} \
           -p ${{ secrets.NOTATION_PASSWORD }}
   deploy:
@@ -65,7 +85,7 @@ jobs:
           az aks get-credentials --resource-group ${{ env.RG_NAME }} --name ${{ env.AKS_NAME }}
       - name: Replace Image in Kubernetes Manifest
         run: |
-          sed -i 's/brk264hacr/${{ env.ACR_NAME }}/g;s/v0.1-alpha/${{ github.sha }}/g' deployment-app.yaml;
+          sed -i 's/brk264hacr/${{ env.ACR_NAME }}/g;s/v0.1-alpha/${{ github.sha }}-patched/g' deployment-app.yaml;
           sed -i 's/postgres:15.0-alpine/${{ env.ACR_NAME }}.azurecr.io\/postgres:15.0-alpine/g' deployment-db.yaml
         working-directory: ./manifests
       - name: Apply Kubernetes Configuration
