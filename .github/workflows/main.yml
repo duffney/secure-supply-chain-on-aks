@@ -52,8 +52,7 @@ jobs:
           pushd ./bin
           sudo ./buildkitd &
           popd
-          sudo ./copa patch -i ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r ./patch.json -t ${{ github.sha }}-patched
-          sudo pkill buildkitd
+          sudo ./copa patch -i ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r ./patch.json -t ${{ github.sha }}-patched && sudo pkill buildkitd
       - name: Push Docker Image
         run: |
           docker push ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
