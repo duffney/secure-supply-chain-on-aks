@@ -17,11 +17,13 @@ jobs:
         uses: actions/checkout@v2
       - name: Build Docker Image
         run: |
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} .
+          docker pull brk264hacr.azurecr.io/azure-voting-app-rust:df858fbe23c79d473a2c46c7b98ad7a0a85bafc9
+          # docker build -t ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} .
       - name: Aqua Security Trivy Scan
         uses: aquasecurity/trivy-action@0.10.0
         with:
-          image-ref: ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
+          image-ref: brk264hacr.azurecr.io/azure-voting-app-rust:df858fbe23c79d473a2c46c7b98ad7a0a85bafc9
+          # image-ref: ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
           format: json
           output: patch.json
           vuln-type: os
@@ -37,7 +39,8 @@ jobs:
           az acr login --name ${{ env.ACR_NAME }}
       - name: Push Docker Image
         run: |
-          docker push ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
+          docker push brk264hacr.azurecr.io/azure-voting-app-rust:df858fbe23c79d473a2c46c7b98ad7a0a85bafc9
+          # docker push ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
       - name: Patch with Copacetic
         run: |
           function download() {
@@ -52,7 +55,8 @@ jobs:
           pushd ./bin
           sudo nohup ./buildkitd &
           popd
-          sudo ./copa patch -i ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}-patched
+          sudo ./copa patch -i brk264hacr.azurecr.io/azure-voting-app-rust:df858fbe23c79d473a2c46c7b98ad7a0a85bafc9 -r patch.json -t df858fbe23c79d473a2c46c7b98ad7a0a85bafc9-patched
+          # sudo ./copa patch -i ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}-patched
       - name: Push Docker Image
         run: |
           docker push ${{ env.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
