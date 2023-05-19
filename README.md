@@ -4,7 +4,7 @@ Learn how to use open-source tools to secure your container deployments on Azure
 
 <!-- TODO: Add aka link -->
 
-👉 [See the workshop]() 
+👉 [See the workshop](https://aka.ms/build/pre03/s3c) 
 
 ## Prerequisites
 
