@@ -39,3 +39,5 @@ cd terraform;
 terraform init;
 terraform apply
 ```
+
+> We'll do it live!
