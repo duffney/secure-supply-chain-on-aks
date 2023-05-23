@@ -1,20 +1,20 @@
 apiVersion: templates.gatekeeper.sh/v1beta1
 kind: ConstraintTemplate
 metadata:
-  name: ratifyverification
+  name: ratifyverificationdeployment
 spec:
   crd:
     spec:
       names:
-        kind: RatifyVerification
+        kind: RatifyVerificationDeployment
   targets:
     - target: admission.k8s.gatekeeper.sh
       rego: |
-        package ratifyverification
+        package ratifyverificationdeployment
         
         # Get data from Ratify
         remote_data := response {
-          images := [img | img = input.review.object.spec.containers[_].image]
+          images := [img | img = input.review.object.spec.template.spec.containers[_].image]
           response := external_data({"provider": "ratify-provider", "keys": images})
         }
 

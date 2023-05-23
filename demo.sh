@@ -60,11 +60,11 @@ run "helm repo add ratify https://deislabs.github.io/ratify"
 run "helm install ratify ratify/ratify --atomic --namespace gatekeeper-system --set akvCertConfig.enabled=true --set akvCertConfig.vaultURI=${VAULT_URI} --set akvCertConfig.cert1Name=${CERT_NAME} --set akvCertConfig.tenantId=${TENANT_ID} --set oras.authProviders.azureWorkloadIdentityEnabled=true --set azureWorkloadIdentity.clientId=${CLIENT_ID}"
 
 desc "Apply the Ratify constraint"
-run "kubectl apply -f ./manifests/template.yaml"
-run "kubectl apply -f ./manifests/constraint.yaml"
+run "kubectl apply -f template.yaml"
+run "kubectl apply -f constraint.yaml"
 
 desc "View the Ratify constraint"
-run "code ./manifests/constraint.yaml"
+run "code constraint.yaml"
 
 desc "Run an unsign image"
 run "kubectl run unsigned --image ${IMAGE}"
@@ -81,9 +81,6 @@ run "kubectl logs deployment/ratify --namespace gatekeeper-system"
 
 desc "Delete the azure-voting-app-rust"
 run "kubectl delete -f ./manifests"
-
-sed -i "s/${ACR_NAME}\.azurecr\.io\/postgres:15\.0-alpine/postgres:15\.0-alpine/g" ./manifests/deployment-db.yaml
-sed -i 's/v0\.1-alpha-patched/v0.1-alpha/' ./manifests/deployment-app.yaml
 
 desc "Open GitHub Action workflow"
 run "code ./.github/workflows/main.yml"

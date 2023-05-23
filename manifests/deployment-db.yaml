@@ -18,7 +18,7 @@ spec:
         app: azure-voting-db
     spec:
       containers:
-      - image: brk264hacr.azurecr.io/postgres:15.0-alpine
+      - image: postgres:15.0-alpine
         name: postgres
         ports:
         - containerPort: 5432
