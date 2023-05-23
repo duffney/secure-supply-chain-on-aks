@@ -70,17 +70,11 @@ desc "Run an unsign image"
 run "kubectl run unsigned --image ${IMAGE}"
 kubectl delete pod unsigned >> /dev/null 2>&1
 
-desc "Check the Ratify logs"
-run "kubectl logs deployment/ratify --namespace gatekeeper-system"
-
 desc "Run the azure-voting-app-rust application with signed images"
 run "kubectl apply -f ./manifests"
 
-desc "Check if verification was successful"
+desc "Check the Ratify logs"
 run "kubectl logs deployment/ratify --namespace gatekeeper-system"
-
-desc "Delete the azure-voting-app-rust"
-run "kubectl delete -f ./manifests"
 
 desc "Open GitHub Action workflow"
 run "code ./.github/workflows/main.yml"
