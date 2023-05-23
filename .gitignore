@@ -12,3 +12,5 @@ notation
 bin/*
 contrib/*
 patch.json
+demo.env
+buildkitd

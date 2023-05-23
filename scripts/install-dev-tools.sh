@@ -1,3 +1,6 @@
+sudo apt update
+sudo apt -y install pv
+sudo apt -y install xdg-utils
 curl -L -o trivy_0.41.0_Linux-64bit.tar.gz https://github.com/aquasecurity/trivy/releases/download/v0.41.0/trivy_0.41.0_Linux-64bit.tar.gz;
 tar -xzf trivy_0.41.0_Linux-64bit.tar.gz trivy;
 rm trivy_0.41.0_Linux-64bit.tar.gz;
