@@ -1,7 +1,7 @@
 #!/bin/bash
 
 . ./util.sh
-source ./demo.env
+source ./demo.env # See demo.env.txt for example
 
 run 'clear'
 
