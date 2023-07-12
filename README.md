@@ -1,10 +1,6 @@
-# 🔑 Securing container deployments on AKS by using open-source tools​
+# 🔑 Secure Supply Chain AKS
 
 Learn how to use open-source tools to secure your container deployments on Azure Kubernetes Service.
-
-<!-- TODO: Add aka link -->
-
-👉 [See the workshop](https://aka.ms/build/pre03/s3c) 
 
 ## Prerequisites
 
