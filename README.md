@@ -2,9 +2,7 @@
 
 Learn how to use open-source tools to secure your container deployments on Azure Kubernetes Service.
 
-<!-- TODO: Add aka link -->
-
-👉 [See the workshop]() 
+👉 [Watch the MSBuild 2023 Talk](https://www.youtube.com/watch?v=Mep9QWc3ByE&t=1s) 
 
 ## Prerequisites
 
