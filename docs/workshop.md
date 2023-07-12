@@ -15,19 +15,17 @@ sections_title:
   - Introduction
 ---
 
-# Securing container deployments on Azure Kubernetes Service with open-source tools
+# Securing container deployments on Azure Kubernetes Service by using open-source tools
 
-In this workshop, you'll learn how to use open-source tools; Trivy, Notary, and Ratify to secure your container deployments on Azure Kubernetes Service.
-
-Trivy will be used to scan container images for vulnerabilities. Notary will be used to sign and verify container images. And Ratify will be used to automate the signing and verification process of container images deployed to Azure Kubernetes Service.
+In this workshop, you'll learn how to use open-source tools; Trivy, Copacetic, Notary, and Ratify to secure your container deployments on Azure Kubernetes Service.
 
 ## Objectives
 
 You'll learn how to:
-- Deploy Azure resources with Terraform
-- Scan container images for vulnerabilities
-- Sign and verify container images
-- Prevent unsigned container images from being deployed to Azure Kubernetes Service
+- Use Trivy to scan container images for vulnerabilities
+- Automate container image patching with Copacetic
+- Sign container images with Notary 
+- Prevent unsigned container images from being deployed with Ratify 
 
 ## Prerequisites
 
@@ -35,94 +33,61 @@ You'll learn how to:
 |----------------------|------------------------------------------------------|
 | GitHub account       | [Get a free GitHub account](https://github.com/join) |
 | Azure account        | [Get a free Azure account](https://azure.microsoft.com/free) |
-| Azure CLI            | [Install Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) |
-| Terraform            | [Install Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) |
-| Helm                 | [Install Helm](https://helm.sh/docs/intro/install/) |
-| Docker               | [Install Docker](https://docs.docker.com/get-docker/) |
-| kubectl              | [Install kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) |
+| VS Code              | [Install VS Code](https://code.visualstudio.com/download) |
 
 ---
 
-## Deploying Azure Resources with Terraform
+## Set up your local environment
 
-Terrafom is an open-source infrastructure as code tool that allows you to define and provision Azure resources. In this section, you'll use Terraform to deploy the following Azure resources:
+A dev container is provided to help you set up your local environment. The dev container is a Docker container that contains all the tools you'll need to complete the workshop.
+### Start the dev container
 
-- Resource Group
-- Azure Kubernetes Service
-- Azure Key Vault
-- Azure Container Registry
-- Azure User Assigned Managed Identity
-- Azure Federated Credential
+Clone the workshop repository and open the repository in VS Code.
 
-In addition to deploying the resources, you'll also create a Service Principal and assign it the Contributor role to the Resource Group. The Service Principal will be used to authenticate Terraform to Azure.
+```bash
+git clone https://github.com/duffney/secure-supply-chain-on-aks.git
+```
 
-### Log into Azure with the Azure CLI.
+Next, open the repository in VS Code.
+
+```bash
+cd secure-supply-chain-on-aks
+code .
+```
+
+VS Code will prompt you to reopen the repository in a dev container. Click **Reopen in Container**. This will take a few minutes to build the dev container.
+
+<div class="tip" data-title="Tip">
+
+> If you don't see the prompt, you can open the command palette by hitting `Ctrl+Shift+P` on Windows or `Cmd+Shift+P` on Mac and search for **Dev Containers: Reopen in Container**.
+
+</div>
+
+### Build and pull the Azure Voting App container images
+
+Within this repository, there is a `Dockerfile` that will build a container image that hosts the Azure Voting App. 
+
+The Azure Voting App is a simple Rust application that allows users to vote between the two options presented and stores the results in a database.
+
+Run the following command to build the container image from the root of this repository:
+
+```bash
+docker build -t azure-voting-app-rust:v0.1-alpha .
+```
+
+Next pull the `PostgreSQL` container image from Docker Hub. This will be used to store the votes.
+
+```bash
+docker pull postgres:15.0-alpine
+```
+
+## Deploy the Azure resources with Terraform
 
 First, log into Azure with the Azure CLI.
 
 ```bash
 az login
 ```
-
-### Create a Service Principal
-
-Next, create a Service Principal for Terraform to use to authenticate to Azure.
-
-```bash
-subscription_id=$(az account show --query id -o tsv)
-
-az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/$subscription_id"
-```
-
-<details>
-<summary>Example Output</summary>
-
-```output
-{
-  "appId": "00000000-0000-0000-0000-000000000000",
-  "displayName": "azure-cli-2024-04-19-19-38-16",
-  "name": "http://azure-cli-2024-04-19-19-38-16",
-  "password": "QVexZdqvcPxx%4HJ^ZY",
-  "tenant": "00000000-0000-0000-0000-000000000000"
-}
-```
-
-</details>
-
-Take note of the `appId`, `password`, and `tenant` values and store them in a secure location. You'll need them later.
-
-### Assign the User Access Administrator role to the Service Principal
-
-Next, assign the User Access Administrator role to the Service Principal. This role will allow Terraform to create the federated identity credential used by the workload identity.
-
-```bash
-az role assignment create --role "User Access Administrator" --assignee  "00000000-0000-0000-0000-000000000000" --scope "/subscriptions/$subscription_id"
-```
-
-Replace `00000000-0000-0000-0000-000000000000` with the `appId` value from the previous step.
-
-### Export the Service Principal credentials as environment variables
-
-Next, export the Service Principal credentials as environment variables. These variables will be used by Terraform to authenticate to Azure.
-
-```bash
-export ARM_CLIENT_ID="00000000-0000-0000-0000-000000000000"
-export ARM_CLIENT_SECRET="QVexZdqvcPxx%4HJ^ZY"
-export ARM_SUBSCRIPTION_ID=$subscription_id
-export ARM_TENANT_ID="00000000-0000-0000-0000-000000000000"
-```
-
-Replace `00000000-0000-0000-0000-000000000000` with the `appId`, `password`, and `tenant` values from the previous step.
-
-### Sign into Azure CLI with the Service Principal
-
-Change the Azure CLI login from your user to the service principal you just created. This allows Terraform to consistently configure access polices to Azure Key Vault for the current user.
-
-```bash
-az login --service-principal -u $ARM_CLIENT_ID -p $ARM_CLIENT_SECRET --tenant $ARM_TENANT_ID
-```
-
-### Deploy the Terraform configuration
 
 Next, deploy the Terraform configuration. This will create the Azure resources needed for this workshop.
 
@@ -148,30 +113,26 @@ azurerm_container_registry.acr: Creating...
 </details>
 
 
-<div class="info" data-title="warning">
+<div class="warning" data-title="warning">
 
 > Certain Azure resources need to be globally unique. If you receive an error that a resource already exists, you may need to change the name of the resource in the `terraform.tfvars` file.
 
 </div>
 
-### Export Terraform output as environment variables
-
-As part of the Terraform deployment, several output variables were created. These variables will be used by the other tools in this workshop. 
-
 Run the following command to export the Terraform output as environment variables:
 
 <details>
-<summary>bash</summary>
+<summary>Bash</summary>
 
 ```bash
-export GROUP_NAME="$(terraform output -raw resource_group_name)"
-export AKS_NAME="$(terraform output -raw aks_cluster_name)"
-export VAULT_URI="$(terraform output -raw key_vault_uri)"
-export KEYVAULT_NAME="$(terraform output -raw key_vault_name)"
+export GROUP_NAME="$(terraform output -raw rg_name)"
+export AKS_NAME="$(terraform output -raw aks_name)"
+export VAULT_URI="$(terraform output -raw akv_uri)"
+export KEYVAULT_NAME="$(terraform output -raw akv_name)"
 export ACR_NAME="$(terraform output -raw acr_name)"
-export CERT_NAME="$(terraform output -raw ratify_certificate_name)"
+export CERT_NAME="$(terraform output -raw cert_name)"
 export TENANT_ID="$(terraform output -raw tenant_id)"
-export CLIENT_ID="$(terraform output -raw workload_identity_client_id)"
+export CLIENT_ID="$(terraform output -raw wl_client_id)"
 ```
 
 </details>
@@ -180,78 +141,38 @@ export CLIENT_ID="$(terraform output -raw workload_identity_client_id)"
 
 <summary>PowerShell</summary>
 
-```pwsh
-$GROUP_NAME="$(terraform output -raw resource_group_name)"
-$AKS_NAME="$(terraform output -raw aks_cluster_name)"
-$VAULT_URI="$(terraform output -raw key_vault_uri)"
-$KEYVAULT_NAME="$(terraform output -raw key_vault_name)"
-$ACR_NAME="$(terraform output -raw acr_name)"
-$CERT_NAME="$(terraform output -raw ratify_certificate_name)"
-$TENANT_ID="$(terraform output -raw tenant_id)"
-$CLIENT_ID="$(terraform output -raw workload_identity_client_id)"
+```powershell
+$GROUP_NAME = $(terraform output -raw rg_name)
+$AKS_NAME = $(terraform output -raw aks_name)
+$VAULT_URI = $(terraform output -raw akv_uri)
+$KEYVAULT_NAME = $(terraform output -raw akv_name)
+$ACR_NAME = $(terraform output -raw acr_name)
+$CERT_NAME = $(terraform output -raw cert_name)
+$TENANT_ID = $(terraform output -raw tenant_id)
+$CLIENT_ID = $(terraform output -raw wl_client_id)
 ```
 
 </details>
 
-### Enable the Web App Routing Addon
-
-Web app routing is used to expose the Azure Voting app to the internet. You'll need to enable the Web App Routing Addon on your cluster for the ingress of the Azure Voting app to work.
-
-Run the following command to enable the Web App Routing Addon on your cluster:
-
-```bash
-az aks addon enable --name $AKS_NAME --resource-group $GROUP_NAME --addon web_application_routing
-```
-
-Before continuing, change back to the root of this repository:
-
-```bash
-cd ..
-```
-
 ---
 
-## Scanning Container Images for Vulnerabilities
+## Scanning container images for vulnerabilities
 
-Image scanning is a critical part of the container lifecycle. In this section, you'll use Trivy to scan a container image for vulnerabilities and secrets.
+<!-- Demo starts here -->
+<!-- Rewrite this as a blog post on dev.to -->
 
-### Build the Azure Voting App container image
-
-Within this repository, there is a `Dockerfile` that will build a container image that hosts the Azure Voting App. The Azure Voting App is a simple Rust application that allows users to vote on their favorite pet.
-
-Run the following command to build the container image from the root of this repository:
-
-```bash
-docker build -t azure-voting-app-rust:v0.1-alpha .
-```
-
-### Pull PostgreSQL container image from Docker Hub
-
-The Azure Voting App requires a PostgreSQL database to store the votes. Run the following command to pull the PostgreSQL container image from Docker Hub:
-
-```bash
-docker pull postgres:15.0-alpine
-```
-
-### Download Trivy
-
-Installing Trivy is as simple as downloading the binary for your operating system. Browse to the [Trivy Installation page](https://aquasecurity.github.io/trivy/v0.40/getting-started/installation/) and download the binary for your operating system.
-
-### Use Trivy to scan for vulnerabilities
-
-Once you've downloaded Trivy, you can use it to scan container images for vulnerabilities.
+In this section, you'll use Trivy to scan a container image for vulnerabilities and secrets.
 
 Run the following command to scan the `azure-voting-app-rust` container image for vulnerabilities:
 
 ```bash
-trivy image azure-voting-app-rust:v0.1-alpha;
-trivy image postgres:15.0-alpine
+./trivy image azure-voting-app-rust:v0.1-alpha;
 ```
 
 You can adjust the severity level of the vulnerabilities that Trivy reports by using the `--severity` flag. For example, to only report vulnerabilities that are `CRITICAL`, you would run the following command:
 
 ```bash
-trivy image --severity CRITICAL azure-voting-app-rust:v0.1-alpha
+./trivy image --severity CRITICAL azure-voting-app-rust:v0.1-alpha
 ```
 
 <details>
@@ -276,35 +197,14 @@ Total: 14 (CRITICAL: 14)
 </details>
 
 
-<div class="info" data-title="note">
+<div class="info" data-title="info">
 
-> Outdated container images are a common source of vulnerabilities. Besure to regularly update your container images to the latest version.
+> As part of the dev container, the `trivy` binary was downloaded to the root of the repo. If you don't see the binary, reopen the repo in a dev container. 
 
 </div>
 
-### Adding exemptions for vulnerabilities
+<!-- Add copacetic instructions here -->
 
-Often times, vulnerabilites that pop up during a security scan don't apply to the application running on the system. When this is the case it's necessary to add an exemption to Trivy so the scanner will ignore the vulnerability.
-
-Create a file called `.trivyignore` at the root of the repository. Within the file add a comment for why an exemption is being made followed by the CVE number of the vulnerability.
-
-<details>
-<summary>.trivyignore example</summary>
-
-```output
-# No impact
-CVE-2019-8457
-```
-
-</details>
-
-Run the following command to scan the `azure-voting-app-rust` container image for vulnerabilities and ignore the CVEs listed in the `.trivyignore` file:
-
-```bash
-trivy image azure-voting-app-rust:v0.1-alpha
-```
-
-Notice that the vulnerabilities listed in the `.trivyignore` file are no longer reported.
 
 ### Build and push the container images to Azure Container Registry
 
@@ -334,87 +234,13 @@ docker push $ACR_NAME.azurecr.io/postgres:15.0-alpine
 
 ## Signing Container Images
 
-In this section, you'll use Notary to sign the `azure-voting-app-rust` and `postgres:15.0-alpine` container images. Notary is a CNCF project that provides a way to digitally sign container images. You'll use Notary's command line tool, Notation, to sign and verify container images.
+<!-- blog post -->
 
-### Installing Notation
+In this section, you'll use Notary to sign the `azure-voting-app-rust` and `postgres:15.0-alpine` container images. 
 
-Notation is a command line tool from the CNCF Notary project that allows you to sign and verify container images. Installing Notation is as simple as downloading the binary for your operating system. Browse to the [Notary Installation page](https://github.com/notaryproject/notation/releases). Download the binary for your operating system and add it to your `PATH` environment variable.
+Notation is a command line tool from the CNCF Notary project that allows you to sign and verify container images. 
 
-<details>
-<summary>Install Notation on Linux</summary>
-
-```output
-# Download the binary
-curl -Lo notation.tar.gz https://github.com/notaryproject/notation/releases/download/v1.0.0-rc.4/notation_1.0.0-rc.4_linux_amd64.tar.gz
-
-# Extract the Notation CLI
-[ -d ~/bin ] || mkdir ~/bin
-tar xvzf notation.tar.gz -C ~/bin notation
-rm -rf notation.tar.gz
-
-# Add Notation to that PATH environment variable.
-export PATH="$HOME/bin:$PATH"
-notation version
-```
-
-</details>
-
-<details>
-<summary>Install Notation on Windows</summary>
-
-```output
-# Download the binary
-Invoke-WebRequest -Uri 'https://github.com/notaryproject/notation/releases/download/v1.0.0-rc.4/notation_1.0.0-rc.4_windows_amd64.zip' -OutFile 'notation_1.0.0-rc.4_windows_amd64.zip'
-
-
-# Extract the Notation CLI
-if(!(Test-Path ~/bin)) { New-Item -ItemType Directory -Path ~/bin | Out-Null }
-Expand-Archive ./notation_1.0.0-rc.4_windows_amd64.zip ~/bin
-Remove-Item ./notation_1.0.0-rc.4_windows_amd64.zip
-
-# Add Notation to that PATH environment variable.
-$env:PATH = "$($HOME)/bin;$($env:PATH)"
-notation version
-```
-
-</details>
-
-### Install the Azure Key Vault plugin for Notation
-
-Notation supports a number of different key management systems. In this workshop, you'll use Azure Key Vault to store the keys used to sign container images. To use Azure Key Vault with Notation, you'll need to install the Azure Key Vault plugin for Notation.
-
-Run the following command to install the Azure Key Vault plugin for Notation:
-
-<details>
-
-<summary>Linux</summary>
-
-```bash
-curl -Lo notation-azure-kv.tar.gz \
-https://github.com/Azure/notation-azure-kv/releases/download/v0.5.0-rc.1/notation-azure-kv_0.5.0-rc.1_Linux_amd64.tar.gz
-
-[ -d ~/.config/notation/plugins/azure-kv ] || mkdir -p ~/.config/notation/plugins/azure-kv
-tar xvzf notation-azure-kv.tar.gz -C ~/.config/notation/plugins/azure-kv notation-azure-kv > /dev/null 2>&1
-rm -rf notation-azure-kv.tar.gz
-```
-
-</details>
-
-<details>
-
-<summary>Windows</summary>
-
-```powershell
-Invoke-WebRequest -Uri 'https://github.com/Azure/notation-azure-kv/releases/download/v0.5.0-rc.1/notation-azure-kv_0.5.0-rc.1_Windows_amd64.zip' -OutFile notation-azure-kv_0.5.0-rc.1_Windows_amd64.zip
-
-if(!(Test-Path $env:APPDATA/notation/plugins/azure-kv)) { New-Item -ItemType Directory -Path $env:APPDATA/notation/plugins/azure-kv | Out-Null }
-Expand-Archive ./notation-azure-kv_0.5.0-rc.1_Windows_amd64.zip $env:APPDATA/notation/plugins/azure-kv
-Remove-Item ./notation-azure-kv_0.5.0-rc.1_Windows_amd64.zip
-```
-
-</details>
-
-
+You'll use Notary's command line tool, Notation, to sign and verify container images.
 
 ### Adding a key to Notary
 
@@ -470,6 +296,8 @@ notation sign --key $CERT_NAME $ACR_NAME.azurecr.io/postgres:15.0-alpine -u $tok
 ---
 
 ## Deploy Gatekeeper and Ratify
+
+<!-- blog post -->
 
 In this section, you'll deploy Gatekeeper and Ratify to your Azure Kubernetes Service cluster. Gatekeeper is an open-source project from the CNCF that allows you to enforce policies on your Kubernetes cluster. Ratify is a tool that allows you to deploy policies and constraints that prevent unsigned container image from being deployed to Kubernetes.
 
@@ -568,6 +396,8 @@ kubectl apply -f .
 
 ## Build a CI CD Pipeline with GitHub Actions
 
+<!-- blog post -->
+
 In this section, you'll build a CI/CD pipeline with GitHub Actions that will build, scan, sign, and deploy the Azure Voting app to your Azure Kubernetes Service cluster. To follow along, you'll need to fork this repository to your GitHub account.
 
 ### Create an Azure Service Principal for the GitHub Actions workflow
@@ -648,7 +478,7 @@ echo $tokenName
 echo $tokenPassword
 ```
 
-## Modify the GitHub Actions workflow
+### Modify the GitHub Actions workflow
 
 Within the `.github/workflows/main.yml` file, you'll find a GitHub Actions workflow that builds, scans, signs, and deploys the Azure Voting app to your Azure Kubernetes Service cluster.
 
@@ -694,7 +524,7 @@ Replace `exampleacr12345678` with the name of your Azure Container Registry.
 
 </details>
 
-## Trigger the GitHub Actions workflow
+### Trigger the GitHub Actions workflow
 
 Now that you've modified the GitHub Actions workflow, you can trigger it by pushing a change to the repository.
 
@@ -707,7 +537,7 @@ git push
 
 Browse to the `Actions` tab in your repository and you should see the workflow running.
 
-## Verify the Azure Voting app is deployed
+### Verify the Azure Voting app is deployed
 
 Once the workflow has completed, you can verify the Azure Voting app is deployed to your cluster.
 
