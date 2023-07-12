@@ -33,6 +33,7 @@ resource "azurerm_container_registry" "registry" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   sku                 = "Standard"
+  anonymous_pull_enabled = true
 }
 
 resource "azurerm_user_assigned_identity" "identity" {
@@ -96,9 +97,14 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   default_node_pool {
     name       = "default"
-    node_count = 2
+    node_count = 3
     vm_size    = "Standard_D2_v2"
   }
+
+  web_app_routing {
+    dns_zone_id = ""
+  }
+
 
   identity {
     type = "SystemAssigned"

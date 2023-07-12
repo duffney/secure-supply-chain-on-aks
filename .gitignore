@@ -6,3 +6,11 @@
 /target
 .env
 .DS_Store
+copa
+trivy
+notation
+bin/*
+contrib/*
+patch.json
+demo.env
+buildkitd
