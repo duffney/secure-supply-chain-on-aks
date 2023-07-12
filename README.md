@@ -1,4 +1,4 @@
-# 🔑 Secure Supply Chain AKS
+# 🔑 Secure Supply Chain on AKS
 
 
 ![Secure Supply Chain on AKS Overview](imgs/secure-supply-chain-on-aks-overview.png)
