@@ -15,7 +15,7 @@ run './trivy image --exit-code 0 --format json --output ./patch.json --scanners 
 desc "Review vulnerable packages found in the image"
 run "cat patch.json | jq '.Results[0].Vulnerabilities[] | .PkgID' | sort | uniq"
 
-sudo ./buildkitd &> /dev/null & 
+sudo ./bin/buildkitd &> /dev/null & 
 desc "Use Copacetic to update the vulnerable packages in the image."
 run "sudo ./copa patch -i ${IMAGE} -r ./patch.json -t v0.1-alpha-patched"
 sudo pkill buildkitd

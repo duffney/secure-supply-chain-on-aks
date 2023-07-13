@@ -24,7 +24,7 @@ In this workshop, you'll learn how to use open-source tools; Trivy, Copacetic, N
 You'll learn how to:
 - Use Trivy to scan container images for vulnerabilities
 - Automate container image patching with Copacetic
-- Sign container images with Notary 
+- Sign container images with Notation 
 - Prevent unsigned container images from being deployed with Ratify 
 
 ## Prerequisites
@@ -33,14 +33,16 @@ You'll learn how to:
 |----------------------|------------------------------------------------------|
 | GitHub account       | [Get a free GitHub account](https://github.com/join) |
 | Azure account        | [Get a free Azure account](https://azure.microsoft.com/free) |
-| VS Code              | [Install VS Code](https://code.visualstudio.com/download) |
+| Visual Studio Code   | [Install VS Code](https://code.visualstudio.com/download) |
 
 ---
 
-## Set up your local environment
+## Set up your environment
 
-A dev container is provided to help you set up your local environment. The dev container is a Docker container that contains all the tools you'll need to complete the workshop.
+In order to complete this workshop, you'll need to set up your environment. This includes cloning the workshop repository, building the Azure Voting App container images, and deploying the Azure resources with Terraform.
 ### Start the dev container
+
+The provided repository includes a dev container that installs all the necessary tools required for the workshop. A dev container is essentially a Docker container that comes preloaded with all the tools you need to successfully participate in the workshop.
 
 Clone the workshop repository and open the repository in VS Code.
 
@@ -69,7 +71,7 @@ Within this repository, there is a `Dockerfile` that will build a container imag
 
 The Azure Voting App is a simple Rust application that allows users to vote between the two options presented and stores the results in a database.
 
-Run the following command to build the container image from the root of this repository:
+Run the following command to build the Azure Voting web app container image 
 
 ```bash
 docker build -t azure-voting-app-rust:v0.1-alpha .
@@ -81,7 +83,7 @@ Next pull the `PostgreSQL` container image from Docker Hub. This will be used to
 docker pull postgres:15.0-alpine
 ```
 
-## Deploy the Azure resources with Terraform
+### Deploy the Azure resources with Terraform
 
 First, log into Azure with the Azure CLI.
 
@@ -121,9 +123,6 @@ azurerm_container_registry.acr: Creating...
 
 Run the following command to export the Terraform output as environment variables:
 
-<details>
-<summary>Bash</summary>
-
 ```bash
 export GROUP_NAME="$(terraform output -raw rg_name)"
 export AKS_NAME="$(terraform output -raw aks_name)"
@@ -135,44 +134,47 @@ export TENANT_ID="$(terraform output -raw tenant_id)"
 export CLIENT_ID="$(terraform output -raw wl_client_id)"
 ```
 
-</details>
+Before continuing, change back to the root of the repository.
 
-<details>
-
-<summary>PowerShell</summary>
-
-```powershell
-$GROUP_NAME = $(terraform output -raw rg_name)
-$AKS_NAME = $(terraform output -raw aks_name)
-$VAULT_URI = $(terraform output -raw akv_uri)
-$KEYVAULT_NAME = $(terraform output -raw akv_name)
-$ACR_NAME = $(terraform output -raw acr_name)
-$CERT_NAME = $(terraform output -raw cert_name)
-$TENANT_ID = $(terraform output -raw tenant_id)
-$CLIENT_ID = $(terraform output -raw wl_client_id)
+```bash
+cd ..
 ```
-
-</details>
 
 ---
 
 ## Scanning container images for vulnerabilities
 
 <!-- Demo starts here -->
-<!-- Rewrite this as a blog post on dev.to -->
 
-In this section, you'll use Trivy to scan a container image for vulnerabilities and secrets.
+Containerization has become an integral part of modern software development and deployment. However, with the advantages of containers, there comes a need for ensuring their security. 
+
+In this section, you'll learn how to use Trivy to scan a container image for vulnerabilities.
+
+### Running Trivy for Vulnerability Scans
+
+Trivy is an open-source vulnerability scanner specifically designed for container images. It provides a simple and efficient way to detect vulnerabilities in containerized applications. 
+
+Trivy leverages a comprehensive vulnerability database and checks container images against known security issues, including vulnerabilities in the operating system packages, application dependencies, and other components.
 
 Run the following command to scan the `azure-voting-app-rust` container image for vulnerabilities:
 
 ```bash
-./trivy image azure-voting-app-rust:v0.1-alpha;
+IMAGE=azure-voting-app-rust:v0.1-alpha;
+trivy image $IMAGE;
 ```
 
-You can adjust the severity level of the vulnerabilities that Trivy reports by using the `--severity` flag. For example, to only report vulnerabilities that are `CRITICAL`, you would run the following command:
+<!-- TODO add output -->
+
+Trivy will start scanning the specified container image for vulnerabilities. It will analyze the operating system, application packages, and libraries within the container to identify any known security issues.
+
+### Adjusting Severity Levels
+
+Trivy allows you to customize the severity level of the reported vulnerabilities. By default, it provides information about vulnerabilities of all severity levels. However, you can narrow down the results based on your requirements.
+
+For example, if you only want to see vulnerabilities classified as CRITICAL, you can modify the command as follows:
 
 ```bash
-./trivy image --severity CRITICAL azure-voting-app-rust:v0.1-alpha
+trivy image --severity CRITICAL $IMAGE
 ```
 
 <details>
@@ -197,26 +199,59 @@ Total: 14 (CRITICAL: 14)
 </details>
 
 
-<div class="info" data-title="info">
+### Filtering vulnerabilities by type
 
-> As part of the dev container, the `trivy` binary was downloaded to the root of the repo. If you don't see the binary, reopen the repo in a dev container. 
+By default, Trivy scans for vulnerabilities in all components of the container image, including the operating system packages, application dependencies, and libraries. However, you can narrow down the results by specifying the type of vulnerabilities you want to see.
 
-</div>
+For example, if you only want to see vulnerabilities in the operating system packages, you can modify the command as follows:
 
-<!-- Add copacetic instructions here -->
+```bash
+trivy image --vuln-type os $IMAGE
+```
 
+<!-- TODO add output -->
 
-### Build and push the container images to Azure Container Registry
+### Chosing a scanner
 
-Next, you'll build the container images that will be used in this workshop.
+Trivy supports four scanner options; vuln, config, secret, and license. Vuln is the default scanner and it scans for vulnerabilities in the container image. Config scans for misconfiguration in infrastructure as code configurations, like Terraform. Secret scans for sensitive information and secrets in the project files. And license scans for software license issues.
 
-Run the following command to build the `azure-voting-app-rust` container image and push it to the Azure Container Registry:
+You can specify the scanner you want to use by using the `--scanners` option. For example, if you only want to use the vuln scanner, you can modify the command as follows:
+
+```bash
+trivy image --scanners vuln $IMAGE
+```
+
+<!-- TODO add output -->
+
+### Exporting a vulnerability report
+
+Seeing the vulnerability reports in the terminal is useful, but it's not the most convenient way to view the results. Trivy allows you to export the vulnerability report in a variety of formats, including JSON, HTML, and CSV.
+
+Run the following command to export the vulnerability report in JSON format:
+
+```bash
+trivy image --exit-code 0 --format json --output ./patch.json --scanners vuln --vuln-type os --ignore-unfixed  $IMAGE
+```
+
+---
+
+## Using Copacetic to patch container images
+
+Copacetic is an open-source tool that helps you patch container images for vulnerabilities. It uses Trivy vulnerability reports to identify the vulnerabilities in the container image and adds patched layers to the image to fix the vulnerabilities.
+
+In this section, you'll use Copacetic to patch the `azure-voting-app-rust` container image for vulnerabilities.
+
+### Build and push the container images 
+
+A currently limitation of Copacetic is that it can only patch container images that are stored in a container registry. Therefore, you'll need to build and push the `azure-voting-app-rust` container image to the Azure Container Registry.
+
+Run the following commands to build the `azure-voting-app-rust` container image and push it to the Azure Container Registry:
 
 ```bash
 az acr build --registry $ACR_NAME -t azure-voting-app-rust:v0.1-alpha .
 ```
 
-Run the following command to build the `postgres` container image and push it to the Azure Container Registry:
+Next, tag the `postgres:15.0-alpine` container image and push it to the Azure Container Registry: 
 
 ```bash
 docker tag postgres:15.0-alpine $ACR_NAME.azurecr.io/postgres:15.0-alpine
@@ -229,10 +264,49 @@ docker push $ACR_NAME.azurecr.io/postgres:15.0-alpine
 
 </div>
 
+### Patching the container image
+
+Now that you have your container images built and pushed to the Azure Container Registry, let's proceed with patching them.
+
+First, start the Copacetic buildkit daemon by running the following command:
+
+```bash
+sudo ./bin/buildkitd &> /dev/null & 
+```
+
+Next, run `copa` to patch the `azure-voting-app-rust` container image:
+
+```bash
+ACR_IMAGE=${ACR_NAME}.azurecr.io/azure-voting-app-rust:v0.1-alpha
+
+sudo copa patch -i ${ACR_IMAGE} -r ./patch.json -t v0.1-alpha-patched
+```
+
+Once the patching process is complete, there will be a newly patched container image on your local machine. You can view the patched image by running the following command:
+
+```bash
+docker images | grep patched
+```
+
+<!-- TODO add output -->
+
+To confirm that Copacetic patched the container image, rerun the `trivy image` command on the patched image:
+
+```bash
+./trivy image --severity HIGH --scanners vuln ${ACR_IMAGE}-patched
+```
+
+<!-- TODO add output -->
+
+Lastly, push the patched image tag to the Azure Container Registry:
+
+```bash
+docker push ${ACR_IMAGE}-patched
+```
 
 ---
 
-## Signing Container Images
+## Signing container images with Notation
 
 <!-- blog post -->
 
@@ -297,7 +371,7 @@ notation sign --key $CERT_NAME $ACR_NAME.azurecr.io/postgres:15.0-alpine -u $tok
 
 ## Deploy Gatekeeper and Ratify
 
-<!-- blog post -->
+<!-- blog post Merge with TF config for post -->
 
 In this section, you'll deploy Gatekeeper and Ratify to your Azure Kubernetes Service cluster. Gatekeeper is an open-source project from the CNCF that allows you to enforce policies on your Kubernetes cluster. Ratify is a tool that allows you to deploy policies and constraints that prevent unsigned container image from being deployed to Kubernetes.
 
@@ -353,9 +427,7 @@ kubectl apply -f https://deislabs.github.io/ratify/library/default/template.yaml
 kubectl apply -f https://deislabs.github.io/ratify/library/default/samples/constraint.yaml
 ```
 
----
-
-## Deploy the Azure Voting App
+### Deploy the Azure Voting App
 
 Now that the container images are signed, you can redeploy the Azure Voting app to your cluster.
 
@@ -391,168 +463,3 @@ Run the following command to deploy the Azure Voting app to your cluster:
 cd manifest
 kubectl apply -f .
 ```
-
----
-
-## Build a CI CD Pipeline with GitHub Actions
-
-<!-- blog post -->
-
-In this section, you'll build a CI/CD pipeline with GitHub Actions that will build, scan, sign, and deploy the Azure Voting app to your Azure Kubernetes Service cluster. To follow along, you'll need to fork this repository to your GitHub account.
-
-### Create an Azure Service Principal for the GitHub Actions workflow
-
-First, you'll need to create a Service Principal for the GitHub Actions workflow to use to authenticate to Azure.
-
-Run the following command to create a Service Principal:
-
-```bash
-az ad sp create-for-rbac --name "azure-voting-app-rust-sdk" --role contributor \
-    --scopes /subscriptions/$subscriptionId/resourceGroups/$GROUP_NAME \
-    --sdk-auth
-```
-
-<details>
-
-<summary>Example Output</summary>
-
-```output
-{
-  "clientId": "00000000-0000-0000-0000-000000000000",
-  "clientSecret": "00000000-0000-0000-0000-000000000000",
-  "subscriptionId": "00000000-0000-0000-0000-000000000000",
-  "tenantId": "00000000-0000-0000-0000-000000000000",
-  "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
-  "resourceManagerEndpointUrl": "https://management.azure.com/",
-  "activeDirectoryGraphResourceId": "https://graph.windows.net/",
-  "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
-  "galleryEndpointUrl": "https://gallery.azure.com/",
-  "managementEndpointUrl": "https://management.core.windows.net/"
-}
-```
-
-</details>
-
-Take note of the JSON output and store it in a secure location. You'll use it later to create a GitHub secret.
-
-### Create an Access Policy for the Service Principal
-
-Next, you'll need to create an access policy for the Service Principal that grants key sign and secert get permssions on the Azure Key Vault instance.
-
-Run the following command to create an access policy for the Service Principal:
-
-```bash
-objectId=${az ad sp list --display-name azure-voting-app-rust-sdk --query '[].id' --output tsv}
-az keyvault set-policy --name $KEYVAULT_NAME --object-id $objectId --key-permissions sign --secret-permissions get
-```
-
-### Create the AZURE_CREDENTIALS secret
-
-
-Go to [GitHub](https://github.com) and browse to the repository you forked earlier. Next, click `Secrets and variables` > `Settings` > `Actions`. Then on the `Actions` page, click `New repository secret`.
-
-In the `Name` field, enter `AZURE_CREDENTIALS`. In the `Value` field, enter the JSON output from the previous step. Then click `Add secret`.
-
-### Add the signing certificate keyId as a secret
-
-Click `New repository secret`, then in the `Name` field, enter `SIGN_CERT_KEY_ID`. In the `Value` field, enter the signing certificate keyId. Then click `Add secret`.
-
-If you don't remember the signing certificate keyId, you can run the following command to retrieve it:
-
-```bash
-az keyvault certificate show --name $CERT_NAME --vault-name $KEYVAULT_NAME --query kid -o tsv
-```
-
-### Add the Azure Container Registry token as a secret
-
-Click `New repository secret`, then in the `Name` field, enter `TOKEN_USERNAME`. In the `Value` field, enter the name of Azure Container Registry token. Then click `Add secret`.
-
-
-Next, click `New repository secret`, then in the `Name` field, enter `TOKEN_PASSWORD`. In the `Value` field, enter the password of Azure Container Registry token. Then click `Add secret`.
-
-
-Both the `TOKEN_USERNAME` and `TOKEN_PASSWORD` secrets were created when you deployed Ratify earlier in this workshop. If you don't remember the token name or password, you can run displaying the values of the variables you exported earlier in this workshop:
-
-```bash
-echo $tokenName
-echo $tokenPassword
-```
-
-### Modify the GitHub Actions workflow
-
-Within the `.github/workflows/main.yml` file, you'll find a GitHub Actions workflow that builds, scans, signs, and deploys the Azure Voting app to your Azure Kubernetes Service cluster.
-
-Take a moment to review the workflow and familiarize yourself with the steps.
-
-In order for the workflow to work for your environment, you'll need to modify the following variables:
-
-- `RG_NAME` - The name of your Azure Resource Group
-- `ACR_NAME` - The name of your Azure Container Registry
-- `AKV_NAME` - The name of your Azure Key Vault
-- `AKS_NAME` - The name of your Azure Kubernetes Service cluster
-- `CERT_NAME` - The name of your signing certificate
-
-Open the `.github/workflows/main.yml` file and replace the above environment variables with the values for your environment.
-
-<details>
-
-<summary>Example GitHub Actions workflow env variables</summary>
-
-```yaml
-env:
-  RG_NAME: example-rg12345678
-  ACR_NAME: exampleacr12345678
-  AKV_NAME: examplekv12345678
-  AKS_NAME: exampleaks12345678
-  CERT_NAME: examplecert12345678
-```
-
-</details>
-
-If you've been following along with this workshop, you'll likely have to update the `sed` command in the `deploy` job to match the name of your Azure Container Registry. Review the `deploy` job and update the `sed` command to match the name of your Azure Container Registry.
-
-<details>
-
-<summary>Example GitHub Actions workflow sed commands</summary>
-
-```yaml
-sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g;s/v0.1-alpha/${{ github.sha }}/g' deployment-app.yaml
-sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g' deployment-db.yaml
-```
-
-Replace `exampleacr12345678` with the name of your Azure Container Registry.
-
-</details>
-
-### Trigger the GitHub Actions workflow
-
-Now that you've modified the GitHub Actions workflow, you can trigger it by pushing a change to the repository.
-
-Run the following command to push a change to the repository:
-
-```bash
-git commit -am "Trigger GitHub Actions workflow"
-git push
-```
-
-Browse to the `Actions` tab in your repository and you should see the workflow running.
-
-### Verify the Azure Voting app is deployed
-
-Once the workflow has completed, you can verify the Azure Voting app is deployed to your cluster.
-
-Run the following command to get the external IP address of the Azure Voting app:
-
-```bash
-kubectl get ingress azure-voting-app-rust
-```
-
-Browse to the external IP address of the Azure Voting app and you should see the Azure Voting app.
-
-<div class="info" data-title="note">
-
-> If you don't see the Azure Voting app, it may take a few minutes for the external IP address to be assigned.
-
-</div>
-
----
