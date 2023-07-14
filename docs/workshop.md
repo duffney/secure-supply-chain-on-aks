@@ -40,6 +40,7 @@ You'll learn how to:
 ## Set up your environment
 
 In order to complete this workshop, you'll need to set up your environment. This includes cloning the workshop repository, building the Azure Voting App container images, and deploying the Azure resources with Terraform.
+
 ### Start the dev container
 
 The provided repository includes a dev container that installs all the necessary tools required for the workshop. A dev container is essentially a Docker container that comes preloaded with all the tools you need to successfully participate in the workshop.
@@ -146,7 +147,7 @@ cd ..
 
 <!-- Demo starts here -->
 
-Containerization has become an integral part of modern software development and deployment. However, with the advantages of containers, there comes a need for ensuring their security. 
+Containerization has become an integral part of modern software development and deployment. However, with the increased adoption of containers, there comes a need for ensuring their security. 
 
 In this section, you'll learn how to use Trivy to scan a container image for vulnerabilities.
 
@@ -163,7 +164,26 @@ IMAGE=azure-voting-app-rust:v0.1-alpha;
 trivy image $IMAGE;
 ```
 
-<!-- TODO add output -->
+<detials>
+<summary>Example Output</summary>
+
+```output
+2023-07-14T17:08:57.400Z        INFO    Vulnerability scanning is enabled
+2023-07-14T17:08:57.401Z        INFO    Secret scanning is enabled
+2023-07-14T17:08:57.401Z        INFO    If your scanning is slow, please try '--scanners vuln' to disable secret scanning
+2023-07-14T17:08:57.401Z        INFO    Please see also https://aquasecurity.github.io/trivy/v0.41/docs/secret/scanning/#recommendation for faster secret detection
+2023-07-14T17:08:57.418Z        INFO    Detected OS: debian
+2023-07-14T17:08:57.418Z        INFO    Detecting Debian vulnerabilities...
+2023-07-14T17:08:57.448Z        INFO    Number of language-specific files: 0
+
+azure-voting-app-rust:v0.1-alpha (debian 11.2)
+==============================================
+Total: 154 (UNKNOWN: 0, LOW: 76, MEDIUM: 27, HIGH: 37, CRITICAL: 14)
+...........................................................
+...........................................................
+```
+
+</details>
 
 Trivy will start scanning the specified container image for vulnerabilities. It will analyze the operating system, application packages, and libraries within the container to identify any known security issues.
 
@@ -177,27 +197,7 @@ For example, if you only want to see vulnerabilities classified as CRITICAL, you
 trivy image --severity CRITICAL $IMAGE
 ```
 
-<details>
-<summary>Example Output</summary>
-
-```output
-2023-04-28T10:16:06.201-0500    INFO    Vulnerability scanning is enabled
-2023-04-28T10:16:06.201-0500    INFO    Secret scanning is enabled
-2023-04-28T10:16:06.201-0500    INFO    If your scanning is slow, please try '--scanners vuln' to disable secret scanning
-2023-04-28T10:16:06.201-0500    INFO    Please see also https://aquasecurity.github.io/trivy/v0.40/docs/secret/scanning/#recommendation for faster secret detection
-2023-04-28T10:16:09.391-0500    INFO    Detected OS: debian
-2023-04-28T10:16:09.391-0500    INFO    Detecting Debian vulnerabilities...
-2023-04-28T10:16:09.416-0500    INFO    Number of language-specific files: 0
-
-azure-voting-app-rust:v0.1-alpha (debian 11.2)
-
-Total: 14 (CRITICAL: 14)
-.......................
-.......................
-```
-
 </details>
-
 
 ### Filtering vulnerabilities by type
 
@@ -209,8 +209,6 @@ For example, if you only want to see vulnerabilities in the operating system pac
 trivy image --vuln-type os $IMAGE
 ```
 
-<!-- TODO add output -->
-
 ### Chosing a scanner
 
 Trivy supports four scanner options; vuln, config, secret, and license. Vuln is the default scanner and it scans for vulnerabilities in the container image. Config scans for misconfiguration in infrastructure as code configurations, like Terraform. Secret scans for sensitive information and secrets in the project files. And license scans for software license issues.
@@ -220,8 +218,6 @@ You can specify the scanner you want to use by using the `--scanners` option. Fo
 ```bash
 trivy image --scanners vuln $IMAGE
 ```
-
-<!-- TODO add output -->
 
 ### Exporting a vulnerability report
 
@@ -233,6 +229,8 @@ Run the following command to export the vulnerability report in JSON format:
 trivy image --exit-code 0 --format json --output ./patch.json --scanners vuln --vuln-type os --ignore-unfixed  $IMAGE
 ```
 
+Having a point-in-time report of the vulnerabilites discovered in your container is certainly a nice to have, but wouldn't it be even more awesome if that report was used to automatically add patched layers to the container image?
+
 ---
 
 ## Using Copacetic to patch container images
@@ -243,19 +241,12 @@ In this section, you'll use Copacetic to patch the `azure-voting-app-rust` conta
 
 ### Build and push the container images 
 
-A currently limitation of Copacetic is that it can only patch container images that are stored in a container registry. Therefore, you'll need to build and push the `azure-voting-app-rust` container image to the Azure Container Registry.
+A currently limitation of Copacetic is that it can only patch container images that are stored in a remote container registry. So, you'll need to push the `azure-voting-app-rust` container image to the Azure Container Registry.
 
 Run the following commands to build the `azure-voting-app-rust` container image and push it to the Azure Container Registry:
 
 ```bash
 az acr build --registry $ACR_NAME -t azure-voting-app-rust:v0.1-alpha .
-```
-
-Next, tag the `postgres:15.0-alpine` container image and push it to the Azure Container Registry: 
-
-```bash
-docker tag postgres:15.0-alpine $ACR_NAME.azurecr.io/postgres:15.0-alpine
-docker push $ACR_NAME.azurecr.io/postgres:15.0-alpine
 ```
 
 <div class="info" data-title="note">
@@ -288,15 +279,27 @@ Once the patching process is complete, there will be a newly patched container i
 docker images | grep patched
 ```
 
-<!-- TODO add output -->
-
 To confirm that Copacetic patched the container image, rerun the `trivy image` command on the patched image:
 
 ```bash
-./trivy image --severity HIGH --scanners vuln ${ACR_IMAGE}-patched
+trivy image --severity CRITICAL --scanners vuln ${ACR_IMAGE}-patched
 ```
 
-<!-- TODO add output -->
+<details>
+<summary>Example Output</summary>
+
+```output
+2023-07-14T17:45:27.463Z        INFO    Vulnerability scanning is enabled
+2023-07-14T17:45:30.157Z        INFO    Detected OS: debian
+2023-07-14T17:45:30.157Z        INFO    Detecting Debian vulnerabilities...
+2023-07-14T17:45:30.165Z        INFO    Number of language-specific files: 0
+
+s3cexampleacr.azurecr.io/azure-voting-app-rust:v0.1-alpha-patched (debian 11.2)
+
+Total: 1 (CRITICAL: 1)
+```
+
+</details>
 
 Lastly, push the patched image tag to the Azure Container Registry:
 
@@ -308,6 +311,12 @@ docker push ${ACR_IMAGE}-patched
 
 ## Signing container images with Notation
 
+Next, tag the `postgres:15.0-alpine` container image and push it to the Azure Container Registry: 
+
+```bash
+docker tag postgres:15.0-alpine $ACR_NAME.azurecr.io/postgres:15.0-alpine
+docker push $ACR_NAME.azurecr.io/postgres:15.0-alpine
+```
 <!-- blog post -->
 
 In this section, you'll use Notary to sign the `azure-voting-app-rust` and `postgres:15.0-alpine` container images. 
