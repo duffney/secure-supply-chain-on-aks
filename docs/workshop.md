@@ -206,7 +206,7 @@ By default, Trivy scans for vulnerabilities in all components of the container i
 For example, if you only want to see vulnerabilities in the operating system packages, you can modify the command as follows:
 
 ```bash
-trivy image --vuln-type os $IMAGE
+trivy image --vuln-type os --severity CRITICAL $IMAGE
 ```
 
 ### Chosing a scanner
@@ -307,74 +307,64 @@ Lastly, push the patched image tag to the Azure Container Registry:
 docker push ${ACR_IMAGE}-patched
 ```
 
----
+### Tag and push the Postgres image to ACR
 
-## Signing container images with Notation
-
-Next, tag the `postgres:15.0-alpine` container image and push it to the Azure Container Registry: 
+You just pushed a patched version of the `azure-voting-app-rust` image to Azure Container Registry. But the app won't run witout a valid database container. So, next you'll tag and push a version of the Postgres SQL container to your ACR instance.
 
 ```bash
 docker tag postgres:15.0-alpine $ACR_NAME.azurecr.io/postgres:15.0-alpine
 docker push $ACR_NAME.azurecr.io/postgres:15.0-alpine
 ```
-<!-- blog post -->
 
-In this section, you'll use Notary to sign the `azure-voting-app-rust` and `postgres:15.0-alpine` container images. 
+---
 
-Notation is a command line tool from the CNCF Notary project that allows you to sign and verify container images. 
+## Signing container images with Notation
 
-You'll use Notary's command line tool, Notation, to sign and verify container images.
+In this section, you'll learn how to use Notation, a command-line tool from the CNCF Notary project, to sign and verify container images, which adds an extra layer of security to your deployment pipeline.
+
+### Why Sign Container Images?
+
+On the surface, signing container images just seems like more work. But, signing container images is crucial for several reasons:
+
+* **Image Integrity**: Signing verifies that the image hasn't been tampered with or altered since the signature was applied. It ensures that the image you deploy is the exact image you intended to use.
+* **Authentication**: Signature validation confirms the authenticity of the image, providing a level of trust in the source.
+* **Security and Compliance**: By ensuring image integrity and authenticity, signing helps meet security and compliance requirements, especially in regulated industries.
 
 ### Adding a key to Notary
 
-As part of the Terraform deployment, a self-signed certificate was created and stored in Azure Key Vault. You'll use this certificate to sign container images. The key identifier for the certificate is used to add the certificate to Notary with the `notation key add` command.
+To sign container images with Notation, you need to add a key to the Notary configuration. As part of your infrastructure setup, you created a certificate and stored it in Azure Key Vault. You'll use the KEY_ID of that certificate to identify the certificate used for the digital signatures of your container images.
 
-Run the following `azcli` command to retrieve the key identifier for the certificate:
-
-```bash
-keyId=$(az keyvault certificate show --name $CERT_NAME --vault-name $KEYVAULT_NAME --query kid -o tsv)
-```
-
-Run the following command to add the certificate to Notary:
+To get the `KEY_ID` from Azure Key Vault, run the following command:
 
 ```bash
-notation key add --plugin azure-kv $CERT_NAME --id $keyId
+KEY_ID=$(az keyvault certificate show --name $CERT_NAME --vault-name $KEYVAULT_NAME --query kid -o tsv)
 ```
 
-To verify the key was added successfully, run the following command:
+Next, add the certificate to Notary using the notation key add command:
+
+```bash
+notation key add --plugin azure-kv default --id $KEY_ID --default
+```
+
+You can verify that the key was added successfully by running:
 
 ```bash
 notation key list
 ```
 
-### Creating an Azure Container Registry token
-
-In order to sign a container image, you'll need to create a token for the Azure Container Registry. This token will be used by the Notary CLI to authenticate with the Azure Container Registry and sign the container image.
-
-Run the following command to create a token for the Azure Container Registry:
-
-```bash
-tokenName=exampleToken
-tokenPassword=$(az acr token create \
-    --name $tokenName \
-    --registry $ACR_NAME \
-    --scope-map _repositories_admin \
-    --query 'credentials.passwords[0].value' \
-    --only-show-errors \
-    --output tsv)
-```
-
 ### Signing the container image with Notation
 
-Now that you have a token for the Azure Container Registry, you can use Notation to sign the `azure-voting-app-rust` and `postgres:15.0-alpine` container images.
+With the key added to Notary, you can now sign your container images. Let's sign the azure-voting-app-rust and postgres:15.0-alpine images pushed to your Azure Container Registry.
 
-Run the following command to sign the container image:
+To sign the images, use the following commands:
 
 ```bash
-notation sign --key $CERT_NAME $ACR_NAME.azurecr.io/azure-voting-app-rust:v0.1-alpha -u $tokenName -p $tokenPassword
+notation sign $ACR_NAME.azurecr.io/azure-voting-app-rust:v0.1-alpha
 
-notation sign --key $CERT_NAME $ACR_NAME.azurecr.io/postgres:15.0-alpine -u $tokenName -p $tokenPassword
+notation sign $ACR_NAME.azurecr.io/postgres:15.0-alpine
 ```
+
+These commands will apply signatures to the specified images, ensuring their integrity and authenticity.
 
 ---
 
@@ -382,7 +372,7 @@ notation sign --key $CERT_NAME $ACR_NAME.azurecr.io/postgres:15.0-alpine -u $tok
 
 <!-- blog post Merge with TF config for post -->
 
-In this section, you'll deploy Gatekeeper and Ratify to your Azure Kubernetes Service cluster. Gatekeeper is an open-source project from the CNCF that allows you to enforce policies on your Kubernetes cluster. Ratify is a tool that allows you to deploy policies and constraints that prevent unsigned container image from being deployed to Kubernetes.
+In this section, you'll deploy Gatekeeper and Ratify to your Azure Kubernetes Service cluster. Gatekeeper is an open-source project from the CNCF that allows you to enforce policies on your Kubernetes cluster andb Ratify is a tool that allows you to deploy policies and constraints that prevent unsigned container image from being deployed to Kubernetes.
 
 ### Get the Kubernetes credentials
 
@@ -425,16 +415,26 @@ helm install ratify \
     --set azureWorkloadIdentity.clientId=${CLIENT_ID}
 ```
 
+Verify Ratify is running with the following command:
+
+```bash
+kubectl get pods --namespace gatekeeper-system
+```
+
 ### Deploy Ratfiy policies
 
 Once Ratify is deployed, you'll need to deploy the policies and constraints that prevent unsigned container images from being deployed to Kubernetes.
 
 Run the following command to deploy the Ratify policies to your cluster:
 
+<!-- TODO: Write custom template block deployment and pods -->
+
 ```bash
 kubectl apply -f https://deislabs.github.io/ratify/library/default/template.yaml
 kubectl apply -f https://deislabs.github.io/ratify/library/default/samples/constraint.yaml
 ```
+
+<!-- TODO: deploy unsigned image -->
 
 ### Deploy the Azure Voting App
 

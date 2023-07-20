@@ -21,7 +21,7 @@ readonly timeout=$(if [ "$(uname)" == "Darwin" ]; then echo "1"; else echo "0.1"
 
 function desc() {
     maybe_first_prompt
-    echo "$blue# $@$reset"
+    echo -e "$blue# $@$reset"
     prompt
 }
 
@@ -68,7 +68,5 @@ function relative() {
         echo "$(realpath $(dirname $(which $0)))/$arg" | sed "s|$(realpath $(pwd))|.|"
     done
 }
-
-# SSH_NODE=$(kubectl get nodes | tail -1 | cut -f1 -d' ')
 
 trap "echo" EXIT

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+sudo apt update;
+sudo apt install pv;
+
 curl -L -o trivy_0.41.0_Linux-64bit.tar.gz https://github.com/aquasecurity/trivy/releases/download/v0.41.0/trivy_0.41.0_Linux-64bit.tar.gz;
 tar -xzf trivy_0.41.0_Linux-64bit.tar.gz trivy;
 rm trivy_0.41.0_Linux-64bit.tar.gz;
