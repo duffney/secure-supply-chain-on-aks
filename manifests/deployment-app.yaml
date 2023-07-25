@@ -18,7 +18,7 @@ spec:
         app: azure-voting-app
     spec:
       containers:
-      - image: brk264hacr.azurecr.io/azure-voting-app-rust:v0.1-alpha
+      - image: azure-voting-app-rust:v0.1-alpha
         name: azure-voting-app-rust
         ports:
         - containerPort: 8080

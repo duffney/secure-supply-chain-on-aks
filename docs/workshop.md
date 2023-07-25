@@ -5,7 +5,7 @@ type: workshop
 authors: Josh Duffney 
 contacts: '@joshduffney'
 # banner_url: assets/copilot-banner.jpg
-duration_minutes: 45
+duration_minutes: 30 
 audience: devops engineers, devs, site reliability engineers, security engineers
 level: intermediate
 tags: azure, github actions, notary, ratify, secure supply chain, kubernetes, helm, terraform, gatekeeper, azure kubernetes service, azure key vault, azure container registry
@@ -35,17 +35,18 @@ You'll learn how to:
 | Azure account        | [Get a free Azure account](https://azure.microsoft.com/free) |
 | Visual Studio Code   | [Install VS Code](https://code.visualstudio.com/download) |
 
+
+In order to begin this workshop, you'll need to setup the Azure environment and deploy Gatekeeper and Ratify to your AKS cluster.
+
+Follow the [setup](setup.md) instructions to deploy and configure the infrastructure.
+
 ---
 
-## Set up your environment
+## Start the dev container
 
-In order to complete this workshop, you'll need to set up your environment. This includes cloning the workshop repository, building the Azure Voting App container images, and deploying the Azure resources with Terraform.
+A local development environment is provided for this workshop using a dev container. It includes all the tools you need to successfully participate in the workshop. 
 
-### Start the dev container
-
-The provided repository includes a dev container that installs all the necessary tools required for the workshop. A dev container is essentially a Docker container that comes preloaded with all the tools you need to successfully participate in the workshop.
-
-Clone the workshop repository and open the repository in VS Code.
+Run the following command to clone the repository.
 
 ```bash
 git clone https://github.com/duffney/secure-supply-chain-on-aks.git
@@ -66,9 +67,19 @@ VS Code will prompt you to reopen the repository in a dev container. Click **Reo
 
 </div>
 
+---
+
+## Scanning container images for vulnerabilities
+
+<!-- Demo starts here -->
+
+Containerization has become an integral part of modern software development and deployment. However, with the increased adoption of containers, there comes a need for ensuring their security. 
+
+In this section, you'll learn how to use Trivy to scan a container image for vulnerabilities.
+
 ### Build and pull the Azure Voting App container images
 
-Within this repository, there is a `Dockerfile` that will build a container image that hosts the Azure Voting App. 
+Before you begin, there is a `Dockerfile` that will build a container image that hosts the Azure Voting App. 
 
 The Azure Voting App is a simple Rust application that allows users to vote between the two options presented and stores the results in a database.
 
@@ -83,73 +94,6 @@ Next pull the `PostgreSQL` container image from Docker Hub. This will be used to
 ```bash
 docker pull postgres:15.0-alpine
 ```
-
-### Deploy the Azure resources with Terraform
-
-First, log into Azure with the Azure CLI.
-
-```bash
-az login
-```
-
-Next, deploy the Terraform configuration. This will create the Azure resources needed for this workshop.
-
-```bash
-cd terraform;
-terraform init;
-terraform apply
-```
-
-<details>
-<summary>Example Output</summary>
-
-```output
-azurerm_resource_group.rg: Creating...
-azurerm_resource_group.rg: Creation complete after 1s [id=/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg]
-azurerm_key_vault.kv: Creating...
-azurerm_key_vault.kv: Creation complete after 4s [id=https://kv.vault.azure.net]
-azurerm_user_assigned_identity.ua: Creating...
-azurerm_user_assigned_identity.ua: Creation complete after 1s [id=/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/ua]
-azurerm_container_registry.acr: Creating...
-```
-
-</details>
-
-
-<div class="warning" data-title="warning">
-
-> Certain Azure resources need to be globally unique. If you receive an error that a resource already exists, you may need to change the name of the resource in the `terraform.tfvars` file.
-
-</div>
-
-Run the following command to export the Terraform output as environment variables:
-
-```bash
-export GROUP_NAME="$(terraform output -raw rg_name)"
-export AKS_NAME="$(terraform output -raw aks_name)"
-export VAULT_URI="$(terraform output -raw akv_uri)"
-export KEYVAULT_NAME="$(terraform output -raw akv_name)"
-export ACR_NAME="$(terraform output -raw acr_name)"
-export CERT_NAME="$(terraform output -raw cert_name)"
-export TENANT_ID="$(terraform output -raw tenant_id)"
-export CLIENT_ID="$(terraform output -raw wl_client_id)"
-```
-
-Before continuing, change back to the root of the repository.
-
-```bash
-cd ..
-```
-
----
-
-## Scanning container images for vulnerabilities
-
-<!-- Demo starts here -->
-
-Containerization has become an integral part of modern software development and deployment. However, with the increased adoption of containers, there comes a need for ensuring their security. 
-
-In this section, you'll learn how to use Trivy to scan a container image for vulnerabilities.
 
 ### Running Trivy for Vulnerability Scans
 
@@ -368,107 +312,98 @@ These commands will apply signatures to the specified images, ensuring their int
 
 ---
 
-## Deploy Gatekeeper and Ratify
+## Preventing unsigned container images from being deployed with Ratify
 
-<!-- blog post Merge with TF config for post -->
+In this section, you'll learn how to use Ratify to prevent unsigned container images from being deployed to your AKS cluster.
 
-In this section, you'll deploy Gatekeeper and Ratify to your Azure Kubernetes Service cluster. Gatekeeper is an open-source project from the CNCF that allows you to enforce policies on your Kubernetes cluster andb Ratify is a tool that allows you to deploy policies and constraints that prevent unsigned container image from being deployed to Kubernetes.
+### Deploy Unsigned App Images
 
-### Get the Kubernetes credentials
+The first step is to deploy the app images without any signing. 
 
-Run the following command to get the Kubernetes credentials for your cluster:
-
-```bash
-az aks get-credentials --resource-group ${GROUP_NAME} --name ${AKS_NAME}
-```
-
-### Deploy Gatekeeper
-
-Run the following command to deploy Gatekeeper to your cluster:
+Use the following command to apply the manifests:
 
 ```bash
-helm repo add gatekeeper https://open-policy-agent.github.io/gatekeeper/charts
-
-helm install gatekeeper/gatekeeper  \
---name-template=gatekeeper \
---namespace gatekeeper-system --create-namespace \
---set enableExternalData=true \
---set validatingWebhookTimeoutSeconds=5 \
---set mutatingWebhookTimeoutSeconds=2
+kubectl apply -f manifests/
 ```
 
-### Deploy Ratify
-
-Run the following command to deploy Ratify to your cluster:
+Next, check the Ratify logs for the blocked deployment:
 
 ```bash
-helm repo add ratify https://deislabs.github.io/ratify
-
-helm install ratify \
-    ratify/ratify --atomic \
-    --namespace gatekeeper-system \
-    --set akvCertConfig.enabled=true \
-    --set akvCertConfig.vaultURI=${VAULT_URI} \
-    --set akvCertConfig.cert1Name=${CERT_NAME} \
-    --set akvCertConfig.tenantId=${TENANT_ID} \
-    --set oras.authProviders.azureWorkloadIdentityEnabled=true \
-    --set azureWorkloadIdentity.clientId=${CLIENT_ID}
+kubectl logs -n ratify deployment/ratify
 ```
-
-Verify Ratify is running with the following command:
-
-```bash
-kubectl get pods --namespace gatekeeper-system
-```
-
-### Deploy Ratfiy policies
-
-Once Ratify is deployed, you'll need to deploy the policies and constraints that prevent unsigned container images from being deployed to Kubernetes.
-
-Run the following command to deploy the Ratify policies to your cluster:
-
-<!-- TODO: Write custom template block deployment and pods -->
-
-```bash
-kubectl apply -f https://deislabs.github.io/ratify/library/default/template.yaml
-kubectl apply -f https://deislabs.github.io/ratify/library/default/samples/constraint.yaml
-```
-
-<!-- TODO: deploy unsigned image -->
-
-### Deploy the Azure Voting App
-
-Now that the container images are signed, you can redeploy the Azure Voting app to your cluster.
-
-Open the `deployment-app.yml` and `deployment-db.yml` files in the `azure-voting-app-rust` directory. Replace the `image` property with the fully qualified name of the container image in your Azure Container Registry.
 
 <details>
-<summary>deployment-app.yml</summary>
+<summary>Example Output</summary>
 
-```yaml
-    spec:
-      containers:
-      - image: exampleacr12345678.azurecr.io/azure-voting-app-rust:v0.1-alpha
-        name: azure-voting-app-rust
+```output
+//TODO add output
 ```
 
 </details>
 
-<details>
-<summary>deployment-db.yml</summary>
+Clean up the failed deployment by running the following command:
 
-```yaml
-    spec:
-      containers:
-      - image: exampleacr12345678.azurecr.io/postgres:15.0-alpine
-        name: postgres
+```bash
+kubectl delete -f manifests/
+```
+
+### Deploy Signed App Images
+
+Now that you've seen how Ratify prevents unsigned images from being deployed, let's deploy the signed images.
+
+Use the following command to update the manifests with the signed image tags:
+
+```bash
+sed -i "s|azure-voting-app-rust:v0.1-alpha|azure-voting-app-rust:v0.1-alpha-patched|g" manifests/azure-voting-app.yaml
+
+sed -i "s|postgres:15.0-alpine|$ACR_NAME.azurecr.io/postgres:15.0-alpine|g" manifests/postgres.yaml
+```
+
+Next, apply the manifests:
+
+```bash
+kubectl apply -f manifests/
+```
+
+Finally, check the pods to confirm that the app is running:
+
+```bash
+kubectl get pods
+```
+
+<details>
+
+<summary>Example Output</summary>
+
+```output
+TODO add output
 ```
 
 </details>
 
-Run the following command to deploy the Azure Voting app to your cluster:
+To understand why Ratify allowed the signed images to be deployed, take a look at the constraints and templates that were applied to the cluster.
 
 ```bash
-cd manifest
-kubectl apply -f .
+code manifests/constraints.yaml
+code manifests/templates.yaml
 ```
+
+After a few minutes, check the status of the ingress resource to get the public IP address of the app:
+
+```bash
+kubectl get ingress
+```
+
+<details>
+
+<summary>Example Output</summary>
+
+```output
+TODO add output
+```
+
+</details>
+
+Open a browser and navigate to the IP address of the app. You should see the Azure Voting App.
+
+---
