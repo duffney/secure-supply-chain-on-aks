@@ -37,7 +37,7 @@ variable "ratify_namespace" {
   default = "gatekeeper-system"
 }
 
-variable "ratify_cert_name" {
+variable "sign_cert_name" {
   type = string
-  default = "ratify"
+  default = "default"
 }

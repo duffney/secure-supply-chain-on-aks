@@ -19,7 +19,7 @@ output "acr_name" {
 }
 
 output "cert_name" {
-  value = azurerm_key_vault_certificate.ratify-cert.name
+  value = azurerm_key_vault_certificate.sign-cert.name
 }
 
 output "tenant_id" {

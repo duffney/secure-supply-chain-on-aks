@@ -130,8 +130,8 @@ resource "azurerm_federated_identity_credential" "workload-identity-credential" 
   subject             = "system:serviceaccount:${var.ratify_namespace}:ratify-admin"
 }
 
-resource "azurerm_key_vault_certificate" "ratify-cert" {
-  name         = var.ratify_cert_name
+resource "azurerm_key_vault_certificate" "sign-cert" {
+  name         = var.sign_cert_name
   key_vault_id = azurerm_key_vault.kv.id
 
   certificate_policy {
