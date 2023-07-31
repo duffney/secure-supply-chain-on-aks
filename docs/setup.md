@@ -1,4 +1,15 @@
-### Deploy the Azure resources with Terraform
+## Inftrastructure Overview
+
+As part of this workshop, you'll need to deploy the following Azure resources:
+| Azure Resources                     | Notes                                                                                           |
+|------------------------------------|-------------------------------------------------------------------------------------------------------|
+| Azure Resource Group               |                                                                  |
+| Azure Key Vault                    | Stores the certificate used for digtial signatures                               |
+| Azure Container Registry           |                                                          |
+| Azure Kubernetes Service           |                                                                                                 |
+| Azure User Assigned Managed Identity| Authenticates to Azure Key Vault as a Workload Identity and Azure Container Registry by using the AcrPull role. |
+
+## Deploy the Azure resources with Terraform
 
 First, log into Azure with the Azure CLI.
 
@@ -42,7 +53,7 @@ Run the following command to export the Terraform output as environment variable
 export GROUP_NAME="$(terraform output -raw rg_name)"
 export AKS_NAME="$(terraform output -raw aks_name)"
 export VAULT_URI="$(terraform output -raw akv_uri)"
-export KEYVAULT_NAME="$(terraform output -raw akv_name)"
+export AKV_NAME="$(terraform output -raw akv_name)"
 export ACR_NAME="$(terraform output -raw acr_name)"
 export CERT_NAME="$(terraform output -raw cert_name)"
 export TENANT_ID="$(terraform output -raw tenant_id)"

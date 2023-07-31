@@ -44,7 +44,7 @@ ACR_IMAGE=${ACR_NAME}.azurecr.io/azure-voting-app-rust:v0.1-alpha
 run "docker tag ${IMAGE} ${ACR_IMAGE}"
 run "docker push ${ACR_IMAGE}"
 
-sudo ./bin/buildkitd &> /dev/null & 
+sudo ./bin/buildkitd &> /dev/null & # why does this still output?
 desc "Patch container image with Copacetic"
 run "sudo copa patch -i ${ACR_IMAGE} -r ./patch.json -t v0.1-alpha-patched"
 sudo pkill buildkitd >> /dev/null 2>&1

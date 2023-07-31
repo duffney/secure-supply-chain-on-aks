@@ -5,7 +5,7 @@ type: workshop
 authors: Josh Duffney 
 contacts: '@joshduffney'
 # banner_url: assets/copilot-banner.jpg
-duration_minutes: 30 
+duration_minutes: 30
 audience: devops engineers, devs, site reliability engineers, security engineers
 level: intermediate
 tags: azure, github actions, notary, ratify, secure supply chain, kubernetes, helm, terraform, gatekeeper, azure kubernetes service, azure key vault, azure container registry
@@ -18,6 +18,8 @@ sections_title:
 # Securing container deployments on Azure Kubernetes Service by using open-source tools
 
 In this workshop, you'll learn how to use open-source tools; Trivy, Copacetic, Notary, and Ratify to secure your container deployments on Azure Kubernetes Service.
+
+![Secure Supply Chain](/imgs/secure-supply-chain-on-aks-overview.png)
 
 ## Objectives
 
@@ -44,22 +46,35 @@ Follow the [setup](setup.md) instructions to deploy and configure the infrastruc
 
 ## Start the dev container
 
-A local development environment is provided for this workshop using a dev container. It includes all the tools you need to successfully participate in the workshop. 
+A local development environment is provided for this workshop using a dev container. It includes all the tools you need to successfully participate in the workshop.
 
-Run the following command to clone the repository.
+Follow the steps below to fork the repository and open it in VS Code:
 
-```bash
-git clone https://github.com/duffney/secure-supply-chain-on-aks.git
-```
+1. Fork the repository by navigating to the original repository URL: https://github.com/duffney/secure-supply-chain-on-aks.git. Click on the "Fork" button in the top right corner of the GitHub page. This will create a copy of the repository under your GitHub account.
 
-Next, open the repository in VS Code.
+2. Once the repository is forked, navigate to your forked repository on GitHub. The URL should be https://github.com/your-username/secure-supply-chain-on-aks.git, where "your-username" is your GitHub username.
 
-```bash
-cd secure-supply-chain-on-aks
-code .
-```
+3. Click on the "Code" button, and copy the URL provided (which will be the URL of your forked repository).
 
-VS Code will prompt you to reopen the repository in a dev container. Click **Reopen in Container**. This will take a few minutes to build the dev container.
+4. Open your terminal or command prompt and run the following command to clone your forked repository:
+
+    ```bash
+    git clone https://github.com/your-username/secure-supply-chain-on-aks.git
+    ```
+
+5. Change the working directory to the cloned repository:
+
+    ```bash
+    cd secure-supply-chain-on-aks
+    ```
+
+6. Open the repository in VS Code:
+
+    ```bash
+    code . 
+    ```
+
+7. VS Code will prompt you to reopen the repository in a dev container. Click **Reopen in Container**. This will take a few minutes to build the dev container.
 
 <div class="tip" data-title="Tip">
 
@@ -281,7 +296,7 @@ To sign container images with Notation, you need to add a key to the Notary conf
 To get the `KEY_ID` from Azure Key Vault, run the following command:
 
 ```bash
-KEY_ID=$(az keyvault certificate show --name $CERT_NAME --vault-name $KEYVAULT_NAME --query kid -o tsv)
+KEY_ID=$(az keyvault certificate show --name $CERT_NAME --vault-name $AKV_NAME --query kid -o tsv)
 ```
 
 Next, add the certificate to Notary using the notation key add command:
@@ -329,14 +344,15 @@ kubectl apply -f manifests/
 Next, check the Ratify logs for the blocked deployment:
 
 ```bash
-kubectl logs -n ratify deployment/ratify
+kubectl logs -n gatekeeper-system deployment/ratify
 ```
 
 <details>
 <summary>Example Output</summary>
 
 ```output
-//TODO add output
+time="2023-07-26T17:42:33Z" level=error msg="failed to mutate image reference azure-voting-app-rust:v0.1-alpha: HEAD \"https://registry-1.docker.io/v2/library/azure-voting-app-rust/manifests/v0.1-alpha\": response status code 401: Unauthorized"
+time="2023-07-26T17:42:33Z" level=warning msg="failed to resolve the subject descriptor from store oras with error HEAD \"https://registry-1.docker.io/v2/library/azure-voting-app-rust/manifests/v0.1-alpha\": response status code 401: Unauthorized\n"
 ```
 
 </details>
@@ -376,7 +392,9 @@ kubectl get pods
 <summary>Example Output</summary>
 
 ```output
-TODO add output
+NAME                               READY   STATUS    RESTARTS   AGE
+azure-voting-app-7fb9f67f6-zl64t   1/1     Running   0          17s
+azure-voting-db-699fcf6bcd-g4nhz   1/1     Running   0          17s
 ```
 
 </details>
@@ -399,7 +417,8 @@ kubectl get ingress
 <summary>Example Output</summary>
 
 ```output
-TODO add output
+NAME               CLASS                                HOSTS   ADDRESS         PORTS   AGE
+azure-voting-app   webapprouting.kubernetes.azure.com   *       4.236.203.158   80      60s
 ```
 
 </details>

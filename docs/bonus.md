@@ -1,19 +1,52 @@
-## Build a CI CD Pipeline with GitHub Actions
+# Build a secure pipeline with GitHub Actions
 
 <!-- blog post -->
 
-In this section, you'll build a CI/CD pipeline with GitHub Actions that will build, scan, sign, and deploy the Azure Voting app to your Azure Kubernetes Service cluster. To follow along, you'll need to fork this repository to your GitHub account.
+In this section, you'll build a pipeline with GitHub Actions that will build, scan, sign, and deploy the Azure Voting app to your Azure Kubernetes Service cluster. To follow along, you'll need to fork this repository to your GitHub account.
 
-### Create an Azure Service Principal for the GitHub Actions workflow
+## Login into the GitHub CLI
+
+First, you'll need to sign into the GitHub CLI. Run the following command and follow the prompts to sign in:
+
+```bash
+gh auth login
+```
+
+<div class="tip" data-title="Tip">
+
+> There are several ways to authenticate with the GitHub CLI. To help you choose the best option for your environment, see the [GitHub CLI authentication documentation](https://cli.github.com/manual/gh_auth_login).
+
+</div>
+
+## Refresh Azure resources variables
+
+Next, you'll need to refresh the environment variables for the Azure resources you created earlier in this workshop. Run the following commands to refresh the environment variables:
+
+```bash
+subscriptionId=$(az account show --query id --output tsv);
+cd terraform/;
+export GROUP_NAME="$(terraform output -raw rg_name)"
+export AKS_NAME="$(terraform output -raw aks_name)"
+export VAULT_URI="$(terraform output -raw akv_uri)"
+export AKV_NAME="$(terraform output -raw akv_name)"
+export ACR_NAME="$(terraform output -raw acr_name)"
+export CERT_NAME="$(terraform output -raw cert_name)"
+export TENANT_ID="$(terraform output -raw tenant_id)"
+export CLIENT_ID="$(terraform output -raw wl_client_id)"
+cd ..
+```
+
+## Create an Azure Service Principal
 
 First, you'll need to create a Service Principal for the GitHub Actions workflow to use to authenticate to Azure.
 
 Run the following command to create a Service Principal:
-
+<!-- TODO: replace with fed creds -->
 ```bash
-az ad sp create-for-rbac --name "azure-voting-app-rust-sdk" --role contributor \
-    --scopes /subscriptions/$subscriptionId/resourceGroups/$GROUP_NAME \
-    --sdk-auth
+spDisplayName='github-workflow-sp'
+credJSON=$(az ad sp create-for-rbac --name $spDisplayName --role contributor \
+--scopes /subscriptions/$subscriptionId/resourceGroups/$GROUP_NAME \
+--sdk-auth)
 ```
 
 <details>
@@ -37,96 +70,32 @@ az ad sp create-for-rbac --name "azure-voting-app-rust-sdk" --role contributor \
 
 </details>
 
-Take note of the JSON output and store it in a secure location. You'll use it later to create a GitHub secret.
-
-### Create an Access Policy for the Service Principal
 
 Next, you'll need to create an access policy for the Service Principal that grants key sign and secert get permssions on the Azure Key Vault instance.
 
 Run the following command to create an access policy for the Service Principal:
 
 ```bash
-objectId=${az ad sp list --display-name azure-voting-app-rust-sdk --query '[].id' --output tsv}
-az keyvault set-policy --name $KEYVAULT_NAME --object-id $objectId --key-permissions sign --secret-permissions get
+objectId=$(az ad sp list --display-name $spDisplayName --query '[].id' --output tsv)
+az keyvault set-policy --name $AKV_NAME --object-id $objectId --key-permissions sign --secret-permissions get
 ```
 
 ### Create the AZURE_CREDENTIALS secret
 
+```bash
+gh secret set AZURE_CREDENTIALS --body "$credJSON"
+```
 
-Go to [GitHub](https://github.com) and browse to the repository you forked earlier. Next, click `Secrets and variables` > `Settings` > `Actions`. Then on the `Actions` page, click `New repository secret`.
 
-In the `Name` field, enter `AZURE_CREDENTIALS`. In the `Value` field, enter the JSON output from the previous step. Then click `Add secret`.
 
-### Add the signing certificate keyId as a secret
-
-Click `New repository secret`, then in the `Name` field, enter `SIGN_CERT_KEY_ID`. In the `Value` field, enter the signing certificate keyId. Then click `Add secret`.
-
-If you don't remember the signing certificate keyId, you can run the following command to retrieve it:
+### Create Azure resource variables
 
 ```bash
-az keyvault certificate show --name $CERT_NAME --vault-name $KEYVAULT_NAME --query kid -o tsv
+KEY_ID=$(az keyvault certificate show --name $CERT_NAME --vault-name $AKV_NAME --query kid -o tsv)
+gh variable set ACR_NAME --body "$ACR_NAME";
+gh variable set CERT_NAME --body "$CERT_NAME";
+gh variable set KEY_ID --body "$KEY_ID";
 ```
-
-### Add the Azure Container Registry token as a secret
-
-Click `New repository secret`, then in the `Name` field, enter `TOKEN_USERNAME`. In the `Value` field, enter the name of Azure Container Registry token. Then click `Add secret`.
-
-
-Next, click `New repository secret`, then in the `Name` field, enter `TOKEN_PASSWORD`. In the `Value` field, enter the password of Azure Container Registry token. Then click `Add secret`.
-
-
-Both the `TOKEN_USERNAME` and `TOKEN_PASSWORD` secrets were created when you deployed Ratify earlier in this workshop. If you don't remember the token name or password, you can run displaying the values of the variables you exported earlier in this workshop:
-
-```bash
-echo $tokenName
-echo $tokenPassword
-```
-
-### Modify the GitHub Actions workflow
-
-Within the `.github/workflows/main.yml` file, you'll find a GitHub Actions workflow that builds, scans, signs, and deploys the Azure Voting app to your Azure Kubernetes Service cluster.
-
-Take a moment to review the workflow and familiarize yourself with the steps.
-
-In order for the workflow to work for your environment, you'll need to modify the following variables:
-
-- `RG_NAME` - The name of your Azure Resource Group
-- `ACR_NAME` - The name of your Azure Container Registry
-- `AKV_NAME` - The name of your Azure Key Vault
-- `AKS_NAME` - The name of your Azure Kubernetes Service cluster
-- `CERT_NAME` - The name of your signing certificate
-
-Open the `.github/workflows/main.yml` file and replace the above environment variables with the values for your environment.
-
-<details>
-
-<summary>Example GitHub Actions workflow env variables</summary>
-
-```yaml
-env:
-  RG_NAME: example-rg12345678
-  ACR_NAME: exampleacr12345678
-  AKV_NAME: examplekv12345678
-  AKS_NAME: exampleaks12345678
-  CERT_NAME: examplecert12345678
-```
-
-</details>
-
-If you've been following along with this workshop, you'll likely have to update the `sed` command in the `deploy` job to match the name of your Azure Container Registry. Review the `deploy` job and update the `sed` command to match the name of your Azure Container Registry.
-
-<details>
-
-<summary>Example GitHub Actions workflow sed commands</summary>
-
-```yaml
-sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g;s/v0.1-alpha/${{ github.sha }}/g' deployment-app.yaml
-sed -i 's/exampleacr12345678/${{ env.ACR_NAME }}/g' deployment-db.yaml
-```
-
-Replace `exampleacr12345678` with the name of your Azure Container Registry.
-
-</details>
 
 ### Trigger the GitHub Actions workflow
 
