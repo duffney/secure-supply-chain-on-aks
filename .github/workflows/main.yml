@@ -7,58 +7,58 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v2
-      - name: Build Docker Image
-        run: |
-          docker build -t ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} .
-      - name: Aqua Security Trivy Scan
-        uses: aquasecurity/trivy-action@0.10.0
-        with:
-          image-ref: ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
-          format: json
-          output: patch.json
-          vuln-type: os
-          exit-code: 0
-          ignore-unfixed: true
-          severity: CRITICAL,HIGH
+      # - name: Checkout Code
+      #   uses: actions/checkout@v2
+      # - name: Build Docker Image
+      #   run: |
+      #     docker build -t ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} .
+      # - name: Aqua Security Trivy Scan
+      #   uses: aquasecurity/trivy-action@0.10.0
+      #   with:
+      #     image-ref: ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
+      #     format: json
+      #     output: patch.json
+      #     vuln-type: os
+      #     exit-code: 0
+      #     ignore-unfixed: true
+      #     severity: CRITICAL,HIGH
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Login to Azure Container Registry
         run: |
           az acr login --name ${{ vars.ACR_NAME }}
-      - name: Push Docker Image
-        run: |
-          docker push ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
-      - name: Patch with Copacetic
-        run: |
-          function download() {
-            DOWNLOAD_URL=$1
-            DOWNLOAD_FILE=$2
-            curl -L -o $DOWNLOAD_FILE $DOWNLOAD_URL
-            tar -xzf $DOWNLOAD_FILE
-            rm $DOWNLOAD_FILE
-          }
-          download https://github.com/project-copacetic/copacetic/releases/download/v0.2.0/copa_0.2.0_linux_amd64.tar.gz copa_0.2.0_linux_amd64.tar.gz
-          download https://github.com/moby/buildkit/releases/download/v0.11.6/buildkit-v0.11.6.linux-amd64.tar.gz buildkit-v0.11.6.linux-amd64.tar.gz
-          pushd ./bin
-          sudo nohup ./buildkitd &
-          popd
-          sleep 5
-          sudo ./copa patch -i ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}-patched
-      - name: Push patched Docker image
-        run: |
-          docker push ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
-      - name: Setup Notation with azure-kv plugin
-        uses: Duffney/setup-notation@v1.0.0
-        with:
-          version: 1.0.0-rc.4
-          key_name: ${{ vars.CERT_NAME }}
-          certificate_key_id: ${{ vars.KEY_ID }}
-          plugin_name: notation-azure-kv
-          plugin_version: 0.5.0-rc.1
-      - name: Sign Container Image
-        run: |
-          notation sign --key ${{ vars.CERT_NAME }} ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
+      # - name: Push Docker Image
+      #   run: |
+      #     docker push ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
+      # - name: Patch with Copacetic
+      #   run: |
+      #     function download() {
+      #       DOWNLOAD_URL=$1
+      #       DOWNLOAD_FILE=$2
+      #       curl -L -o $DOWNLOAD_FILE $DOWNLOAD_URL
+      #       tar -xzf $DOWNLOAD_FILE
+      #       rm $DOWNLOAD_FILE
+      #     }
+      #     download https://github.com/project-copacetic/copacetic/releases/download/v0.2.0/copa_0.2.0_linux_amd64.tar.gz copa_0.2.0_linux_amd64.tar.gz
+      #     download https://github.com/moby/buildkit/releases/download/v0.11.6/buildkit-v0.11.6.linux-amd64.tar.gz buildkit-v0.11.6.linux-amd64.tar.gz
+      #     pushd ./bin
+      #     sudo nohup ./buildkitd &
+      #     popd
+      #     sleep 5
+      #     sudo ./copa patch -i ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}-patched
+      # - name: Push patched Docker image
+      #   run: |
+      #     docker push ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
+      # - name: Setup Notation with azure-kv plugin
+      #   uses: Duffney/setup-notation@v1.0.0
+      #   with:
+      #     version: 1.0.0-rc.4
+      #     key_name: ${{ vars.CERT_NAME }}
+      #     certificate_key_id: ${{ vars.KEY_ID }}
+      #     plugin_name: notation-azure-kv
+      #     plugin_version: 0.5.0-rc.1
+      # - name: Sign Container Image
+      #   run: |
+      #     notation sign --key ${{ vars.CERT_NAME }} ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched

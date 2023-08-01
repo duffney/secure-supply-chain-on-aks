@@ -426,3 +426,7 @@ azure-voting-app   webapprouting.kubernetes.azure.com   *       4.236.203.158   
 Open a browser and navigate to the IP address of the app. You should see the Azure Voting App.
 
 ---
+
+References:
+- [Build, sign, and verify container images using Notary and Azure Key Vault](https://learn.microsoft.com/azure/container-registry/container-registry-tutorial-sign-build-push)
+- [Ratify on Azure: Allow only signed images to be deployed on AKS with Notation and Ratify](https://github.com/deislabs/ratify/blob/main/docs/quickstarts/ratify-on-azure.md)
