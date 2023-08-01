@@ -54,12 +54,11 @@ jobs:
       - name: Setup Notation with azure-kv plugin
         uses: Duffney/setup-notation@v1.0.0
         with:
-          version: 1.0.0-rc.4
+          version: 1.0.0-rc.7
           key_name: ${{ vars.CERT_NAME }}
           certificate_key_id: ${{ vars.KEY_ID }}
           plugin_name: notation-azure-kv
-          plugin_version: 0.5.0-rc.1
+          plugin_version: 0.6.0
       - name: Sign Container Image
         run: |
-          az acr login --name ${{ vars.ACR_NAME }};
           notation sign ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
