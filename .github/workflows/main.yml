@@ -61,4 +61,5 @@ jobs:
           plugin_version: 0.5.0-rc.1
       - name: Sign Container Image
         run: |
+          az acr login --name ${{ vars.ACR_NAME }};
           notation sign ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
