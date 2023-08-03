@@ -47,10 +47,11 @@ jobs:
           sudo nohup ./buildkitd &
           popd
           sleep 5
-          sudo ./copa patch -i ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}-patched
+          sudo ./copa patch -i ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}
       - name: Push patched Docker image
+        id: img
         run: |
-          docker push ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
+          echo "DIGEST=$(docker push ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} | grep -oE 'sha256:[a-f0-9]{64}')" >> $GITHUB_OUTPUT
       - name: Setup Notation with azure-kv plugin
         uses: Duffney/setup-notation@v1.0.0
         with:
@@ -61,4 +62,4 @@ jobs:
           plugin_version: 0.6.0
       - name: Sign Container Image
         run: |
-          notation sign ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}-patched
+          notation sign ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust@${{ steps.img.outputs.DIGEST }}

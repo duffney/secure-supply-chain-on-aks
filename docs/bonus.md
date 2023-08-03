@@ -2,7 +2,7 @@
 
 <!-- blog post -->
 
-In this section, you'll build a pipeline with GitHub Actions that will build, scan, sign, and deploy the Azure Voting app to your Azure Kubernetes Service cluster. To follow along, you'll need to fork this repository to your GitHub account.
+In this workshop, you will learn how to build a secure pipeline using GitHub Actions to build, scan, sign, and deploy the Azure Voting app to your Azure Kubernetes Service cluster. To get started, make sure to fork this repository to your GitHub account.
 
 ## Login into the GitHub CLI
 
@@ -14,25 +14,22 @@ gh auth login
 
 <div class="tip" data-title="Tip">
 
-> There are several ways to authenticate with the GitHub CLI. To help you choose the best option for your environment, see the [GitHub CLI authentication documentation](https://cli.github.com/manual/gh_auth_login).
+> TIP: There are several ways to authenticate with the GitHub CLI. To help you choose the best option for your environment, see the [GitHub CLI authentication documentation](https://cli.github.com/manual/gh_auth_login).
 
 </div>
 
 ## Refresh Azure resources variables
 
-Next, you'll need to refresh the environment variables for the Azure resources you created earlier in this workshop. Run the following commands to refresh the environment variables:
+Next, refresh the environment variables for the Azure resources created earlier in this workshop. Run the following commands to refresh the environment variables:
+
 
 ```bash
-subscriptionId=$(az account show --query id --output tsv);
+export SUBSCRIPTION_ID=$(az account show --query id --output tsv);
 cd terraform/;
 export GROUP_NAME="$(terraform output -raw rg_name)"
-export AKS_NAME="$(terraform output -raw aks_name)"
-export VAULT_URI="$(terraform output -raw akv_uri)"
 export AKV_NAME="$(terraform output -raw akv_name)"
 export ACR_NAME="$(terraform output -raw acr_name)"
 export CERT_NAME="$(terraform output -raw cert_name)"
-export TENANT_ID="$(terraform output -raw tenant_id)"
-export CLIENT_ID="$(terraform output -raw wl_client_id)"
 cd ..
 ```
 
@@ -42,10 +39,11 @@ First, you'll need to create a Service Principal for the GitHub Actions workflow
 
 Run the following command to create a Service Principal:
 <!-- TODO: replace with fed creds -->
+<!-- TODO: Remove contrib role with acrpull,acrpush -->
 ```bash
-spDisplayName='github-workflow-sp'
+spDisplayName='github-workflow-sp';
 credJSON=$(az ad sp create-for-rbac --name $spDisplayName --role contributor \
---scopes /subscriptions/$subscriptionId/resourceGroups/$GROUP_NAME \
+--scopes /subscriptions/$SUBSCRIPTION_ID/resourceGroups/$GROUP_NAME \
 --sdk-auth)
 ```
 
@@ -77,18 +75,22 @@ Run the following command to create an access policy for the Service Principal:
 
 ```bash
 objectId=$(az ad sp list --display-name $spDisplayName --query '[].id' --output tsv);
-az keyvault set-policy --name $AKV_NAME --object-id $objectId --key-permissions sign --secret-permissions get
+# az keyvault set-policy --name $AKV_NAME --object-id $objectId --key-permissions sign --secret-permissions get
+az keyvault set-policy --name $AKV_NAME --object-id $objectId --certificate-permissions get --key-permissions sign --secret-permissions get
+
 ```
 
 ### Create the AZURE_CREDENTIALS secret
+
+Create a Service Principal for the GitHub Actions workflow to authenticate with Azure. Execute the following command to create a Service Principal:
 
 ```bash
 gh secret set AZURE_CREDENTIALS --body "$credJSON"
 ```
 
-
-
 ### Create Azure resource variables
+
+Create the following GitHub secrets to store the Azure resource variables:
 
 ```bash
 KEY_ID=$(az keyvault certificate show --name $CERT_NAME --vault-name $AKV_NAME --query kid -o tsv)
@@ -104,28 +106,11 @@ Now that you've modified the GitHub Actions workflow, you can trigger it by push
 Run the following command to push a change to the repository:
 
 ```bash
-git commit -am "Trigger GitHub Actions workflow"
-git push
+#Push a change to start the build process
+echo >> README.md
+git add .; git commit -m 'Demo: Live from Microsoft Build!'; git push
 ```
 
-Browse to the `Actions` tab in your repository and you should see the workflow running.
-
-### Verify the Azure Voting app is deployed
-
-Once the workflow has completed, you can verify the Azure Voting app is deployed to your cluster.
-
-Run the following command to get the external IP address of the Azure Voting app:
-
-```bash
-kubectl get ingress azure-voting-app-rust
-```
-
-Browse to the external IP address of the Azure Voting app and you should see the Azure Voting app.
-
-<div class="info" data-title="note">
-
-> If you don't see the Azure Voting app, it may take a few minutes for the external IP address to be assigned.
-
-</div>
+Browse to the `Actions` tab in your repository and you should see the workflow running. Wait for the workflow to complete. Then check the logs for the message 'Successfully signed...' in the logs to confirm the image was signed.
 
 ---

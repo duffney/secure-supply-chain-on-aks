@@ -2,7 +2,6 @@
 
 run 'clear'
 
-# TODO: Add loading progress bar
 desc 'Loading demo environment variables...'
 export IMAGE='azure-voting-app-rust:v0.1-alpha'
 cd terraform/
@@ -35,7 +34,7 @@ run "trivy image --vuln-type os --severity CRITICAL ${IMAGE}"
 
 desc 'Export a vulnerability report'
 run "trivy image --exit-code 0 --format json --output ./patch.json --scanners vuln --vuln-type os --ignore-unfixed  ${IMAGE}" 
-#TODO change to open with code
+
 desc 'Review vulnerable packages found in the image'
 run "cat patch.json | jq '.Results[0].Vulnerabilities[] | .PkgID' | sort | uniq"
 
@@ -46,17 +45,14 @@ run "docker push ${ACR_IMAGE}"
 
 sudo ./bin/buildkitd &> /dev/null & # why does this still output?
 desc "Patch container image with Copacetic"
-run "sudo copa patch -i ${ACR_IMAGE} -r ./patch.json -t v0.1-alpha-patched"
+run "sudo copa patch -i ${ACR_IMAGE} -r ./patch.json -t v0.1-alpha"
 sudo pkill buildkitd >> /dev/null 2>&1
 
-desc "Show the patched image"
-run "docker images | grep patched"
-
 desc "Re-scan the patched image"
-run "trivy image --severity CRITICAL --scanners vuln ${ACR_IMAGE}-patched"
+run "trivy image --severity CRITICAL --scanners vuln ${ACR_IMAGE}"
 
 desc "Push the patched image to ACR"
-run "docker push ${ACR_IMAGE}-patched"
+run "docker push ${ACR_IMAGE}"
 
 desc 'Tag and push Postgres image to ACR'
 run "docker tag postgres:15.0-alpine ${ACR_NAME}.azurecr.io/postgres:15.0-alpine" 
@@ -69,11 +65,17 @@ run "notation key add --plugin azure-kv ${CERT_NAME} --id ${KEY_ID} --default"
 desc 'List the Notation key'
 run 'notation key list'
 
+desc 'Get the Docker image digest'
+run "docker image inspect --format='{{index .RepoDigests 0}}' ${ACR_IMAGE}"
+run "docker image inspect --format='{{index .RepoDigests 1}}' ${ACR_NAME}.azurecr.io/postgres:15.0-alpine"
+export APP_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $ACR_NAME.azurecr.io/azure-voting-app-rust:v0.1-alpha)
+export DB_DIGEST=$(docker image inspect --format='{{range $digest := .RepoDigests}}{{println $digest}}{{end}}' s3cexampleacr.azurecr.io/postgres:15.0-alpine | sort | tail -1)
+
 desc 'Sign the azure-voting-app-rust image'
-run "notation sign ${ACR_IMAGE}-patched"
+run "notation sign ${APP_DIGEST}"
 
 desc 'Sign the Postgres image'
-run "notation sign ${ACR_NAME}.azurecr.io/postgres:15.0-alpine"
+run "notation sign ${DB_DIGEST}"
 
 az aks get-credentials --resource-group ${GROUP_NAME} --name ${AKS_NAME}
 desc 'Deploy unsigned app images'
@@ -83,8 +85,9 @@ kubectl delete manifest/ >> /dev/null 2>&1
 desc 'Check Ratify logs for blocked pod deployment'
 run "kubectl logs deployment/ratify --namespace gatekeeper-system | grep voting"
 
+TODO: Test deploying image with digest
 desc "Modify the app deployment manifests to use the signed image"
-run "sed -i \"s|azure-voting-app-rust:v0.1-alpha|${ACR_IMAGE}-patched|\" ./manifests/deployment-app.yaml"
+run "sed -i \"s|azure-voting-app-rust:v0.1-alpha|${ACR_IMAGE}|\" ./manifests/deployment-app.yaml"
 run "code ./manifests/deployment-app.yaml"
 
 desc "Modify the db deployment manifests to use the signed image"
@@ -94,6 +97,8 @@ run "code ./manifests/deployment-db.yaml"
 desc 'Deploy signed app images'
 run "kubectl apply -f manifests/"
 
+
+desc 'Sleep 10 seconds, wait for pods'
 sleep 10
 desc 'Check deployment status'
 run "kubectl get pods"
