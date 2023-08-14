@@ -3,8 +3,6 @@ on:
   push:
     branches:
       - main 
-env:
-  TAG: v0.1-alpha
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,11 +11,11 @@ jobs:
         uses: actions/checkout@v3
       - name: Build Docker Image
         run: |
-          docker build -t ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ env.TAG }} .
+          docker build -t ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} .
       - name: Aqua Security Trivy Scan
         uses: aquasecurity/trivy-action@0.10.0
         with:
-          image-ref: ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ env.TAG }}
+          image-ref: ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
           format: json
           output: patch.json
           vuln-type: os
@@ -33,7 +31,7 @@ jobs:
           az acr login --name ${{ vars.ACR_NAME }}
       - name: Push Docker Image
         run: |
-          docker push ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ env.TAG }}
+          docker push ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
       - name: Patch with Copacetic
         run: |
           function download() {
@@ -49,11 +47,11 @@ jobs:
           sudo nohup ./buildkitd &
           popd
           sleep 5
-          sudo ./copa patch -i ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ env.TAG }} -r patch.json -t ${{ env.TAG }}
+          sudo ./copa patch -i ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} -r patch.json -t ${{ github.sha }}
       - name: Push patched Docker image
         id: img
         run: |
-          echo "DIGEST=$(docker push ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ env.TAG }} | grep -oE 'sha256:[a-f0-9]{64}')" >> $GITHUB_OUTPUT
+          echo "DIGEST=$(docker push ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }} | grep -oE 'sha256:[a-f0-9]{64}')" >> $GITHUB_OUTPUT
       - name: Setup Notation with azure-kv plugin
         uses: Duffney/setup-notation@v1.0.0
         with:
