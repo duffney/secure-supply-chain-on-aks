@@ -30,4 +30,4 @@ jobs:
       with:
         context: .
         push: true
-        tags: ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ env.TAG }}
+        tags: ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
