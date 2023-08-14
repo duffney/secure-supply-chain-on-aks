@@ -25,7 +25,6 @@ jobs:
         uses: docker/build-push-action@v4.1.1
         with:
           context: .
-          file: .
           push: true
           tags: ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ github.sha }}
 
