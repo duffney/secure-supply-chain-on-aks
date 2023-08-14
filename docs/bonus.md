@@ -75,7 +75,6 @@ Run the following command to create an access policy for the Service Principal:
 
 ```bash
 objectId=$(az ad sp list --display-name $spDisplayName --query '[].id' --output tsv);
-# az keyvault set-policy --name $AKV_NAME --object-id $objectId --key-permissions sign --secret-permissions get
 az keyvault set-policy --name $AKV_NAME --object-id $objectId --certificate-permissions get --key-permissions sign --secret-permissions get
 
 ```

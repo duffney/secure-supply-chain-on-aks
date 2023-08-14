@@ -85,7 +85,6 @@ kubectl delete manifest/ >> /dev/null 2>&1
 desc 'Check Ratify logs for blocked pod deployment'
 run "kubectl logs deployment/ratify --namespace gatekeeper-system | grep voting"
 
-TODO: Test deploying image with digest
 desc "Modify the app deployment manifests to use the signed image"
 run "sed -i \"s|azure-voting-app-rust:v0.1-alpha|${ACR_IMAGE}|\" ./manifests/deployment-app.yaml"
 run "code ./manifests/deployment-app.yaml"
