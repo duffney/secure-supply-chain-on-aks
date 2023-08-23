@@ -45,14 +45,15 @@ run "docker push ${ACR_IMAGE}"
 
 sudo ./bin/buildkitd &> /dev/null & # why does this still output?
 desc "Patch container image with Copacetic"
-run "sudo copa patch -i ${ACR_IMAGE} -r ./patch.json -t v0.1-alpha"
+run "sudo copa patch -i ${ACR_IMAGE} -r ./patch.json -t v0.1-alpha-1"
 sudo pkill buildkitd >> /dev/null 2>&1
+ACR_IMAGE_PATCHED=${ACR_NAME}.azurecr.io/azure-voting-app-rust:v0.1-alpha-1
 
 desc "Re-scan the patched image"
-run "trivy image --severity CRITICAL --scanners vuln ${ACR_IMAGE}"
+run "trivy image --severity CRITICAL --scanners vuln ${ACR_IMAGE_PATCHED}"
 
 desc "Push the patched image to ACR"
-run "docker push ${ACR_IMAGE}"
+run "docker push ${ACR_IMAGE_PATCHED}"
 
 desc 'Tag and push Postgres image to ACR'
 run "docker tag postgres:15.0-alpine ${ACR_NAME}.azurecr.io/postgres:15.0-alpine" 
@@ -66,10 +67,10 @@ desc 'List the Notation key'
 run 'notation key list'
 
 desc 'Get the Docker image digest'
-run "docker image inspect --format='{{index .RepoDigests 0}}' ${ACR_IMAGE}"
+run "docker image inspect --format='{{index .RepoDigests 0}}' ${ACR_IMAGE_PATCHED}"
 run "docker image inspect --format='{{index .RepoDigests 1}}' ${ACR_NAME}.azurecr.io/postgres:15.0-alpine"
-export APP_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $ACR_NAME.azurecr.io/azure-voting-app-rust:v0.1-alpha)
-export DB_DIGEST=$(docker image inspect --format='{{range $digest := .RepoDigests}}{{println $digest}}{{end}}' s3cexampleacr.azurecr.io/postgres:15.0-alpine | sort | tail -1)
+export APP_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $ACR_IMAGE_PATCHED)
+export DB_DIGEST=$(docker image inspect --format='{{range $digest := .RepoDigests}}{{println $digest}}{{end}}' ${ACR_NAME}.azurecr.io/postgres:15.0-alpine | sort | tail -1)
 
 desc 'Sign the azure-voting-app-rust image'
 run "notation sign ${APP_DIGEST}"
@@ -86,16 +87,15 @@ desc 'Check Ratify logs for blocked pod deployment'
 run "kubectl logs deployment/ratify --namespace gatekeeper-system | grep voting"
 
 desc "Modify the app deployment manifests to use the signed image"
-run "sed -i \"s|azure-voting-app-rust:v0.1-alpha|${ACR_IMAGE}|\" ./manifests/deployment-app.yaml"
+run "sed -i \"s|azure-voting-app-rust:v0.1-alpha|${APP_DIGEST}|\" ./manifests/deployment-app.yaml"
 run "code ./manifests/deployment-app.yaml"
 
 desc "Modify the db deployment manifests to use the signed image"
-run "sed -i \"s|postgres:15.0-alpine|${ACR_NAME}.azurecr.io\/postgres:15.0-alpine|\" ./manifests/deployment-db.yaml"
+run "sed -i \"s|postgres:15.0-alpine|${DB_DIGEST}|\" ./manifests/deployment-db.yaml"
 run "code ./manifests/deployment-db.yaml"
 
 desc 'Deploy signed app images'
 run "kubectl apply -f manifests/"
-
 
 desc 'Sleep 10 seconds, wait for pods'
 sleep 10

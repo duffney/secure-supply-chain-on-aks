@@ -18,9 +18,9 @@ curl -L -o buildkit-v0.11.6.linux-amd64.tar.gz https://github.com/moby/buildkit/
 tar -xzf buildkit-v0.11.6.linux-amd64.tar.gz;
 rm buildkit-v0.11.6.linux-amd64.tar.gz;
 
-curl -L -o notation_1.0.0-rc.4_linux_amd64.tar.gz https://github.com/notaryproject/notation/releases/download/v1.0.0-rc.4/notation_1.0.0-rc.4_linux_amd64.tar.gz;
-tar -xzf notation_1.0.0-rc.4_linux_amd64.tar.gz;
-rm notation_1.0.0-rc.4_linux_amd64.tar.gz;
+curl -L -o notation_1.0.0-rc.7_linux_amd64.tar.gz https://github.com/notaryproject/notation/releases/download/v1.0.0-rc.7/notation_1.0.0-rc.7_linux_amd64.tar.gz;
+tar -xzf notation_1.0.0-rc.7_linux_amd64.tar.gz;
+rm notation_1.0.0-rc.7_linux_amd64.tar.gz;
 sudo mv notation /bin;
 
 curl -L -o notation-azure-kv_0.6.0_linux_amd64.tar.gz https://github.com/Azure/notation-azure-kv/releases/download/v0.6.0/notation-azure-kv_0.6.0_linux_amd64.tar.gz;

@@ -229,19 +229,27 @@ sudo ./bin/buildkitd &> /dev/null &
 Next, run `copa` to patch the `azure-voting-app-rust` container image:
 
 ```bash
-sudo copa patch -i ${ACR_IMAGE} -r ./patch.json -t v0.1-alpha
+sudo copa patch -i ${ACR_IMAGE} -r ./patch.json -t v0.1-alpha-1
 ```
+
+<div class="info" data-title="note">
+
+> Appending a hyphen followed by a number is a semantic version compliant way to indicate how many times a container image has been patched.
+
+
+</div>
 
 Once the patching process is complete, there will be a newly patched container image on your local machine. You can view the patched image by running the following command:
 
 ```bash
-docker images | grep patched
+docker images 
 ```
 
 To confirm that Copacetic patched the container image, rerun the `trivy image` command on the patched image:
 
 ```bash
-trivy image --severity CRITICAL --scanners vuln ${ACR_IMAGE}
+ACR_IMAGE_PATCHED=${ACR_NAME}.azurecr.io/azure-voting-app-rust:v0.1-alpha-1;
+trivy image --severity CRITICAL --scanners vuln ${ACR_IMAGE_PATCHED}
 ```
 
 <details>
@@ -263,7 +271,7 @@ Total: 1 (CRITICAL: 1)
 Lastly, push the patched image tag to the Azure Container Registry:
 
 ```bash
-docker push ${ACR_IMAGE}
+docker push ${ACR_IMAGE_PATCHED}
 ```
 
 ### Tag and push the Postgres image to ACR
@@ -322,7 +330,7 @@ By using digests (SHA256) for signing, an additional layer of security is added,
 To get the digests of the container images, run the following commands:
 
 ```bash
-APP_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $ACR_NAME.azurecr.io/azure-voting-app-rust:v0.1-alpha)
+APP_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${ACR_IMAGE_PATCHED})
 
 DB_DIGEST=$(docker inspect --format='{{index .RepoDigests 1}}' $ACR_NAME.azurecr.io/postgres:15.0-alpine)
 ```
@@ -396,9 +404,9 @@ Use the following command to update the manifests with the signed image tags:
 
 <!-- TODO: remove -patched -->
 ```bash
-sed -i "s|azure-voting-app-rust:v0.1-alpha|$ACR_NAME.azurecr.io/azure-voting-app-rust:v0.1-alpha|" ./manifests/deployment-app.yaml
+sed -i "s|azure-voting-app-rust:v0.1-alpha|${APP_DIGEST}|" ./manifests/deployment-app.yaml
 
-sed -i "s|postgres:15.0-alpine|$ACR_NAME.azurecr.io/postgres:15.0-alpine|g" manifests/postgres.yaml
+sed -i "s|postgres:15.0-alpine|${DB_DIGEST}|g" manifests/postgres.yaml
 ```
 
 Next, apply the manifests:
