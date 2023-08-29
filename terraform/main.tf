@@ -29,10 +29,10 @@ resource "azurerm_resource_group" "rg" {
 }
 
 resource "azurerm_container_registry" "registry" {
-  name                = var.registry_name
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  sku                 = "Standard"
+  name                   = var.registry_name
+  resource_group_name    = azurerm_resource_group.rg.name
+  location               = azurerm_resource_group.rg.location
+  sku                    = "Standard"
   anonymous_pull_enabled = true # Copacetic limitation
 }
 
@@ -98,11 +98,14 @@ resource "azurerm_kubernetes_cluster" "aks" {
   kubernetes_version        = "1.26.3"
   workload_identity_enabled = true
   oidc_issuer_enabled       = true
+  automatic_channel_upgrade = "node-image"
+
 
   default_node_pool {
-    name       = "default"
-    node_count = 3
-    vm_size    = "Standard_D2_v2"
+    name                    = "default"
+    node_count              = 3
+    vm_size                 = "Standard_D2_v2"
+
   }
 
   web_app_routing {
@@ -161,7 +164,7 @@ resource "azurerm_key_vault_certificate" "sign-cert" {
     }
 
     secret_properties {
-      content_type = "application/x-pkcs12"
+      content_type = "application/x-pem-file"
     }
 
     x509_certificate_properties {
@@ -171,7 +174,7 @@ resource "azurerm_key_vault_certificate" "sign-cert" {
         "digitalSignature",
       ]
 
-      subject            = "CN=example.com"
+      subject            = "CN=example.com,O=Notation,L=Seattle,ST=WA,C=US"
       validity_in_months = 12
     }
   }
