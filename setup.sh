@@ -28,16 +28,21 @@ helm install gatekeeper/gatekeeper  \
 helm repo add ratify https://deislabs.github.io/ratify
 
 helm install ratify \
-ratify/ratify --atomic \
---namespace gatekeeper-system \
---set akvCertConfig.enabled=true \
---set akvCertConfig.vaultURI=${VAULT_URI} \
---set akvCertConfig.cert1Name=${CERT_NAME} \
---set akvCertConfig.tenantId=${TENANT_ID} \
---set oras.authProviders.azureWorkloadIdentityEnabled=true \
---set azureWorkloadIdentity.clientId=${CLIENT_ID}
+    ratify/ratify --atomic \
+    # --set image.tag=v1.0.0-rc.6 \
+    --namespace gatekeeper-system \
+    --set akvCertConfig.enabled=true \
+    --set featureFlags.RATIFY_CERT_ROTATION=true \ # v1.0.0-rc.7+
+    --set akvCertConfig.vaultURI=${VAULT_URI} \
+    --set akvCertConfig.cert1Name=${CERT_NAME} \
+    --set akvCertConfig.tenantId=${TENANT_ID} \
+    --set oras.authProviders.azureWorkloadIdentityEnabled=true \
+    --set azureWorkloadIdentity.clientId=${CLIENT_ID}
 
-kubectl apply -f https://deislabs.github.io/ratify/library/default/template.yaml
-kubectl apply -f https://deislabs.github.io/ratify/library/default/samples/constraint.yaml
+# kubectl apply -f https://deislabs.github.io/ratify/library/default/template.yaml
+# kubectl apply -f https://deislabs.github.io/ratify/library/default/samples/constraint.yaml
+
+kubectl apply -f  manifests/template.yaml
+kubectl apply -f  manifests/constraint.yaml
 
 kubectl get pods --namespace gatekeeper-system

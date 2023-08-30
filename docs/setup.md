@@ -98,6 +98,7 @@ helm install ratify \
     ratify/ratify --atomic \
     --namespace gatekeeper-system \
     --set akvCertConfig.enabled=true \
+    --set featureFlags.RATIFY_CERT_ROTATION=true \
     --set akvCertConfig.vaultURI=${VAULT_URI} \
     --set akvCertConfig.cert1Name=${CERT_NAME} \
     --set akvCertConfig.tenantId=${TENANT_ID} \
@@ -109,11 +110,10 @@ Once Ratify is deployed, you'll need to deploy the policies and constraints that
 
 Run the following command to deploy the Ratify policies to your cluster:
 
-<!-- TODO: Write custom template block deployment and pods -->
 
 ```bash
-kubectl apply -f https://deislabs.github.io/ratify/library/default/template.yaml
-kubectl apply -f https://deislabs.github.io/ratify/library/default/samples/constraint.yaml
+kubectl apply -f  manifests/template.yaml
+kubectl apply -f  manifests/constraint.yaml
 ```
 
 Verify Ratify is running with the following command:
