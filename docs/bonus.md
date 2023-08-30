@@ -76,8 +76,9 @@ Run the following command to create an access policy for the Service Principal:
 ```bash
 objectId=$(az ad sp list --display-name $spDisplayName --query '[].id' --output tsv);
 az keyvault set-policy --name $AKV_NAME --object-id $objectId --certificate-permissions get --key-permissions sign --secret-permissions get
-
 ```
+
+> NOTE: These permissions are used to get the secret from the signing certificate.
 
 ### Create the AZURE_CREDENTIALS secret
 
@@ -92,7 +93,7 @@ gh secret set AZURE_CREDENTIALS --body "$credJSON"
 Create the following GitHub secrets to store the Azure resource variables:
 
 ```bash
-KEY_ID=$(az keyvault certificate show --name $CERT_NAME --vault-name $AKV_NAME --query kid -o tsv)
+
 gh variable set ACR_NAME --body "$ACR_NAME";
 gh variable set CERT_NAME --body "$CERT_NAME";
 gh variable set KEY_ID --body "$KEY_ID";
@@ -107,7 +108,7 @@ Run the following command to push a change to the repository:
 ```bash
 #Push a change to start the build process
 echo >> README.md
-git add .; git commit -m 'Demo: Live from Microsoft Build!'; git push
+git add .; git commit -m 'Demo: Lets do it live!'; git push
 ```
 
 Browse to the `Actions` tab in your repository and you should see the workflow running. Wait for the workflow to complete. Then check the logs for the message 'Successfully signed...' in the logs to confirm the image was signed.
