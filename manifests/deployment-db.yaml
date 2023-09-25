@@ -5,6 +5,7 @@ metadata:
   labels:
     app: azure-voting-db
   name: azure-voting-db
+  namespace: default
 spec:
   replicas: 1
   selector:
