@@ -18,7 +18,7 @@ spec:
         app: azure-voting-app
     spec:
       containers:
-      - image: azure-voting-app-rust:v0.1-alpha
+      - image: s3cexampleacr.azurecr.io/azure-voting-app-rust@sha256:3e5a4ab6bb7202d5277aebf9fee48ce292b7b5e742a9819534af1a0624c2245d
         name: azure-voting-app-rust
         ports:
         - containerPort: 8080
