@@ -3,7 +3,6 @@ kind: Ingress
 metadata:
   creationTimestamp: null
   name: azure-voting-app
-  namespace: default
 spec:
   ingressClassName: webapprouting.kubernetes.azure.com
   rules:

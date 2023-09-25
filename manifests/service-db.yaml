@@ -5,7 +5,6 @@ metadata:
   labels:
     app: azure-voting-db
   name: azure-voting-db
-  namespace: default
 spec:
   ports:
   - port: 5432

@@ -5,7 +5,6 @@ metadata:
   labels:
     app: azure-voting-app
   name: azure-voting-app
-  namespace: default
 spec:
   replicas: 1
   selector:

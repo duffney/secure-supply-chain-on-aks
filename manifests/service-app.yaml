@@ -5,7 +5,6 @@ metadata:
   labels:
     app: azure-voting-app
   name: azure-voting-app
-  namespace: default
 spec:
   ports:
   - port: 80
