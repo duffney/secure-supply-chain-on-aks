@@ -9,4 +9,4 @@ spec:
     name: azure-voting
   policy:
     semver:
-      range: '>=0.1-alpha'
+      range: '>=1.0.0-0'
