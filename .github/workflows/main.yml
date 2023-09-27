@@ -6,7 +6,7 @@ on:
       - GitOps
 
 env:
-  tag: v0.1-alpha
+  tag: v0.1.0-alpha
 
 jobs:
   build:
