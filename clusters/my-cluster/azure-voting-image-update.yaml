@@ -14,6 +14,8 @@ spec:
         email: fluxcdbot@users.noreply.github.com
         name: fluxcdbot
       messageTemplate: '{{range .Updated.Images}}{{println .}}{{end}}'
+    push:
+      branch: copaGitOps
   interval: 1m0s
   sourceRef:
     kind: GitRepository
