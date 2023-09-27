@@ -7,3 +7,5 @@ metadata:
 spec:
   image: s3cexampleacr.azurecr.io/azure-voting-app-rust
   interval: 1m0s
+  secretRef:
+    name: regcred
