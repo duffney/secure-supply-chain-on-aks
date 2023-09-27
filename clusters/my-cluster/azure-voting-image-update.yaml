@@ -8,7 +8,7 @@ spec:
   git:
     checkout:
       ref:
-        branch: main
+        branch: copaGitOps
     commit:
       author:
         email: fluxcdbot@users.noreply.github.com
