@@ -51,12 +51,13 @@ jobs:
             
             if [[ $current_tag == *-* ]]; then
                 numeric_tag=$(echo "$current_tag" | awk -F'-' '{print $NF}')
-                non_numeric_tag=$(echo "$tag" | sed "s/-${numeric_tag}//g")
+                non_numeric_tag=$(echo "$current_tag" | sed "s#-$numeric_tag##g")
                 incremented_tag=$((numeric_tag+1))
                 new_tag="$non_numeric_tag-$incremented_tag"
             else
                 new_tag="$current_tag-1"
             fi
+            
             echo "::set-output name=patched_tag::$new_tag"
             echo "patched_tagNew=$new_tag" >> $GITHUB_OUTPUT
 
