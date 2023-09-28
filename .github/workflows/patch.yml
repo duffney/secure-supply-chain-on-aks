@@ -2,8 +2,8 @@ on:
     push:
       branches:
           - copaGitOps
-  
-  jobs:
+
+jobs:
       patch:
           runs-on: ubuntu-latest
   
