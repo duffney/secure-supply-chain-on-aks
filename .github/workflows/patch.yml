@@ -11,7 +11,7 @@ jobs:
           fail-fast: false
           matrix:
             # provide relevant list of images to scan on each run
-            images: ['azure-voting-app-rust:v0.1.0-alpha'] # add more for microservices TODO later
+            images: ['s3cexampleacr.azurecr.io/azure-voting-app-rust:v0.1.0-alpha'] # add more for microservices TODO later
 
         steps:
         - name: Login to Azure
