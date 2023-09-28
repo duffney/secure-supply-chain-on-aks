@@ -57,7 +57,14 @@ jobs:
             else
                 new_tag="$current_tag-1"
             fi
-            echo "::set-output name=patched_tag::$new_tag" 
+            echo "::set-output name=patched_tag::$new_tag"
+            echo "patched_tagNew=$new_tag" >> $GITHUB_OUTPUT
+
+
+        - name: debug
+          run: |
+            echo "patched_tag=$patched_tag"
+            echo "patched_tagNew=$patched_tagNew"
 
         - name: Copa Action
           if: steps.vuln_count.outputs.vuln_count != '0'
