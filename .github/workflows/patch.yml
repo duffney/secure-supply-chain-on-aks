@@ -25,7 +25,7 @@ jobs:
                 az acr login --name ${{ vars.ACR_NAME }}
   
           - name: Set up Docker Buildx
-            uses: docker/setup-buildx-action@dedd61cf5d839122591f5027c89bf3ad27691d18
+            uses: docker/setup-buildx-action@v3.0.0
   
           - name: Generate Trivy Report
             uses: aquasecurity/trivy-action@69cbbc0cbbf6a2b0bab8dcf0e9f2d7ead08e87e4
