@@ -66,6 +66,7 @@ jobs:
             run: |
               echo "patched_tag=$patched_tag"
               echo "patched_tagNew=$patched_tagNew"
+              docker pull moby/buildkit:v0.11.6
   
           - name: Copa Action
             if: steps.vuln_count.outputs.vuln_count != '0'
