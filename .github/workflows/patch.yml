@@ -7,6 +7,7 @@ jobs:
     patch:
         runs-on: ubuntu-latest
 
+        #TODO: What if the image has already been patched?  How do we know?
         strategy:
           fail-fast: false
           matrix:
@@ -47,9 +48,10 @@ jobs:
         - name: Extract Patched Tag 
           id: extract_tag
           run: |
+            imageName=$(echo ${{ matrix.images }} | cut -d ':' -f1)
             current_tag=$(echo ${{ matrix.images }} | cut -d ':' -f2)
             
-            if [[ $current_tag == *-* ]]; then
+            if [[ $current_tag == *-[0-9] ]]; then
                 numeric_tag=$(echo "$current_tag" | awk -F'-' '{print $NF}')
                 non_numeric_tag=$(echo "$current_tag" | sed "s#-$numeric_tag##g")
                 incremented_tag=$((numeric_tag+1))
@@ -58,14 +60,9 @@ jobs:
                 new_tag="$current_tag-1"
             fi
             
-            echo "::set-output name=patched_tag::$new_tag"
+            # echo "::set-output name=patched_tag::$new_tag"
             echo "patched_tagNew=$new_tag" >> $GITHUB_OUTPUT
-
-
-        - name: debug
-          run: |
-            echo "patched_tag=$patched_tag"
-            echo "patched_tagNew=$patched_tagNew"
+            echo "imageName=$imageName" >> $GITHUB_OUTPUT
 
         - name: Copa Action
           if: steps.vuln_count.outputs.vuln_count != '0'
@@ -80,6 +77,30 @@ jobs:
             copa-version: '0.3.0'
 
         - name: Docker Push Patched Image
+          id: push
           if: steps.login.conclusion == 'success'
           run: |
-            docker push ${{ steps.copa.outputs.patched-image }}
+            # docker push ${{ steps.copa.outputs.patched-image }}
+            echo "digest=$(docker push ${{ steps.copa.outputs.patched-image }} | grep -oE 'sha256:[a-f0-9]{64}')"
+            echo "artifactReference=${{ steps.extract_tag.outputs.imageName }}@$digest" >> $GITHUB_OUTPUT
+
+        - name: Setup Notation
+          if: steps.push.conclusion == 'success'
+          uses: notaryproject/notation-action/setup@v1
+          with:
+            version: "1.0.0"
+        
+        - name: Notation Sign
+          if: steps.push.conclusion == 'success'
+          uses: notaryproject/notation-action/sign@v1
+          with:
+            plugin_name: azure-kv
+            plugin_url: https://github.com/Azure/notation-azure-kv/releases/download/v1.0.1/notation-azure-kv_1.0.1_linux_amd64.tar.gz
+            plugin_checksum: f8a75d9234db90069d9eb5660e5374820edf36d710bd063f4ef81e7063d3810b
+            key_id: ${{ vars.KEY_ID }}
+            # target_artifact_reference: ${{ steps.extract_tag.outputs.imageName }}@${{ steps.push.outputs.DIGEST }}
+            target_artifact_reference:  ${{ steps.push.outputs.artifactReference }}
+            signature_format: cose
+            plugin_config: |-
+                name=${{ vars.CERT_NAME }}
+                self_signed=false
