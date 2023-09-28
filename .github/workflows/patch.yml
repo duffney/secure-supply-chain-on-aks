@@ -14,6 +14,16 @@ jobs:
             images: ['azure-voting-app-rust:v0.1.0-alpha'] # add more for microservices TODO later
 
         steps:
+        - name: Login to Azure
+          id: login
+          uses: azure/login@v1
+          with:
+            creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+        - name: Login to Azure Container Registry
+          run: |
+              az acr login --name ${{ vars.ACR_NAME }}
+
         - name: Set up Docker Buildx
           uses: docker/setup-buildx-action@dedd61cf5d839122591f5027c89bf3ad27691d18
 
@@ -45,18 +55,6 @@ jobs:
             buildkit-version: 'v0.11.6'
             # optional, default is latest
             copa-version: '0.3.0'
-
-        - name: Login to Azure
-          id: login
-          if: steps.copa.conclusion == 'success'
-          uses: azure/login@v1
-          with:
-              creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
-        - name: Login to Azure Container Registry
-          if: steps.copa.conclusion == 'success'
-          run: |
-            az acr login --name ${{ vars.ACR_NAME }}
 
         - name: Docker Push Patched Image
           if: steps.login.conclusion == 'success'
