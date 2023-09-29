@@ -79,9 +79,10 @@ jobs:
             id: push
             if: steps.login.conclusion == 'success'
             run: |
-              # docker push ${{ steps.copa.outputs.patched-image }}
-              echo "digest=$(docker push ${{ steps.copa.outputs.patched-image }} | grep -oE 'sha256:[a-f0-9]{64}')"
-              echo "artifactReference=${{ steps.extract_tag.outputs.imageName }}@$digest" >> $GITHUB_OUTPUT
+                # docker push ${{ steps.copa.outputs.patched-image }}
+                echo "digest=$(docker push ${{ steps.copa.outputs.patched-image }} | grep -oE 'sha256:[a-f0-9]{64}')"
+                artifactReference="${{ steps.extract_tag.outputs.imageName }}@$digest"
+                echo "artifactReference=$artifactReference" >> $GITHUB_OUTPUT
   
           - name: Setup Notation
             if: steps.push.conclusion == 'success'
