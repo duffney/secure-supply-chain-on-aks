@@ -81,10 +81,6 @@ jobs:
             run: |
                 # docker push ${{ steps.copa.outputs.patched-image }}
                 echo "DIGEST=$(docker push ${{ steps.copa.outputs.patched-image }} | grep -oE 'sha256:[a-f0-9]{64}')" >> $GITHUB_OUTPUT
-                echo $DIGEST
-                # echo "digest=$(docker push ${{ steps.copa.outputs.patched-image }} | grep -oE 'sha256:[a-f0-9]{64}')" artifactReference="${{ steps.extract_tag.outputs.imageName }}@$digest"
-                echo "artifactReference=$artifactReference" >> $GITHUB_OUTPUT
-                echo $artifactReference
   
           - name: Setup Notation
             if: steps.push.conclusion == 'success'
@@ -101,7 +97,6 @@ jobs:
               plugin_checksum: f8a75d9234db90069d9eb5660e5374820edf36d710bd063f4ef81e7063d3810b
               key_id: ${{ vars.KEY_ID }}
               target_artifact_reference: ${{ steps.extract_tag.outputs.imageName }}@${{ steps.push.outputs.DIGEST }}
-              # target_artifact_reference:  ${{ steps.push.outputs.artifactReference }}
               signature_format: cose
               plugin_config: |-
                   name=${{ vars.CERT_NAME }}
