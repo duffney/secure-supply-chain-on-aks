@@ -3,7 +3,7 @@ name: Build-Publish-Deploy
 on:
   push:
     branches:
-      - copaGitOps
+      - main 
 
 env:
   tag: v0.1.0-alpha
