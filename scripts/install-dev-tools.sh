@@ -38,3 +38,5 @@ curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo 
 && sudo apt install gh -y
 
 curl -s https://fluxcd.io/install.sh | sudo bash
+
+sudo apt-get install gnupg2 -y
