@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: default
+resources:
+- deployment-app.yaml
+- deployment-db.yaml
+- ingress.yaml
+- service-app.yaml
+- service-db.yaml
+images:
+- name: azure-voting-app-rust
+  newName: s3cexampleacr.azurecr.io/azure-voting-app-rust # {"$imagepolicy": "flux-system:azure-voting:name"}
+  newTag: v0.1.0-alpha-2 # {"$imagepolicy": "flux-system:azure-voting:tag"}
+- name: postgres
+  newName: s3cexampleacr.azurecr.io/postgres
+  newTag: 15.0-alpine

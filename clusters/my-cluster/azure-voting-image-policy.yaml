@@ -1,0 +1,12 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: azure-voting
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: azure-voting
+  policy:
+    semver:
+      range: '>=0.1.0-0'

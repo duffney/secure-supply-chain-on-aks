@@ -29,10 +29,9 @@ helm repo add ratify https://deislabs.github.io/ratify
 
 helm install ratify \
     ratify/ratify --atomic \
-    # --set image.tag=v1.0.0-rc.6 \
     --namespace gatekeeper-system \
     --set akvCertConfig.enabled=true \
-    --set featureFlags.RATIFY_CERT_ROTATION=true \ # v1.0.0-rc.7+
+    --set featureFlags.RATIFY_CERT_ROTATION=true \
     --set akvCertConfig.vaultURI=${VAULT_URI} \
     --set akvCertConfig.cert1Name=${CERT_NAME} \
     --set akvCertConfig.tenantId=${TENANT_ID} \

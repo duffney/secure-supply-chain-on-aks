@@ -1,0 +1,16 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: azure-voting
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  path: ./manifests
+  prune: true
+  retryInterval: 2m0s
+  sourceRef:
+    kind: GitRepository
+    name: azure-voting
+  timeout: 3m0s
+  wait: true
