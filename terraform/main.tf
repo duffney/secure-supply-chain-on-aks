@@ -49,6 +49,12 @@ resource "azurerm_role_assignment" "acr" {
   principal_id         = azurerm_user_assigned_identity.identity.principal_id
 }
 
+resource "azurerm_role_assignment" "acr-admin" {
+  scope = azurerm_container_registry.registry.id
+  role_definition_name = "Owner"
+  principal_id = data.azuread_client_config.current.object_id
+}
+
 resource "azurerm_key_vault" "kv" {
   name                = var.key_vault_name
   location            = azurerm_resource_group.rg.location
