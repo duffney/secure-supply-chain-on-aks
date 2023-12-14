@@ -24,16 +24,16 @@ desc 'List Docker images'
 run 'docker images'
 
 desc 'Scan the azure-voting-app-rust images'
-run 'trivy image azure-voting-app-rust:v0.1-alpha'
+run 'sudo trivy image azure-voting-app-rust:v0.1-alpha'
 
 desc 'Adjust severity levels'
-run "trivy image --severity CRITICAL ${IMAGE}"
+run "sudo trivy image --severity CRITICAL ${IMAGE}"
 
 desc 'Filter vulnerabilities by type'
-run "trivy image --vuln-type os --severity CRITICAL ${IMAGE}"
+run "sudo trivy image --vuln-type os --severity CRITICAL ${IMAGE}"
 
 desc 'Export a vulnerability report'
-run "trivy image --exit-code 0 --format json --output ./patch.json --scanners vuln --vuln-type os --ignore-unfixed  ${IMAGE}" 
+run "sudo trivy image --exit-code 0 --format json --output ./patch.json --scanners vuln --vuln-type os --ignore-unfixed  ${IMAGE}" 
 
 desc 'Review vulnerable packages found in the image'
 run "cat patch.json | jq '.Results[0].Vulnerabilities[] | .PkgID' | sort | uniq"
@@ -50,7 +50,7 @@ sudo pkill buildkitd >> /dev/null 2>&1
 ACR_IMAGE_PATCHED=${ACR_NAME}.azurecr.io/azure-voting-app-rust:v0.1-alpha-1
 
 desc "Re-scan the patched image"
-run "trivy image --severity CRITICAL --scanners vuln ${ACR_IMAGE_PATCHED}"
+run "sudo trivy image --severity CRITICAL --scanners vuln ${ACR_IMAGE_PATCHED}"
 
 desc "Push the patched image to ACR"
 run "docker push ${ACR_IMAGE_PATCHED}"
@@ -83,8 +83,8 @@ desc 'Deploy unsigned app images'
 run "kubectl apply -f manifests/"
 kubectl delete manifest/ >> /dev/null 2>&1
 
-desc 'Check Ratify logs for blocked pod deployment'
-run "kubectl logs deployment/ratify --namespace gatekeeper-system | grep voting"
+# desc 'Check Ratify logs for blocked pod deployment'
+# run "kubectl logs deployment/ratify --namespace gatekeeper-system | grep voting"
 
 desc "Modify the app deployment manifests to use the signed image"
 run "sed -i \"s|azure-voting-app-rust:v0.1-alpha|${APP_DIGEST}|\" ./manifests/deployment-app.yaml"
