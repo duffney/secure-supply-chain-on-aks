@@ -101,7 +101,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   location                  = azurerm_resource_group.rg.location
   resource_group_name       = azurerm_resource_group.rg.name
   dns_prefix                = "${var.cluster_name}-dns"
-  kubernetes_version        = "1.26.3"
+  kubernetes_version        = "1.28.3"
   workload_identity_enabled = true
   oidc_issuer_enabled       = true
   automatic_channel_upgrade = "node-image"
