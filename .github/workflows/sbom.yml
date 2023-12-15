@@ -1,0 +1,45 @@
+name: sbom
+
+on:
+    push:
+        branches:
+            - sbom
+
+env:
+    tag: sbom-${{ github.sha }}
+
+## GITHUB_TOKEN authentication, add only if you're not going to use a PAT
+permissions:
+    contents: write
+    
+jobs:
+    build:
+        runs-on: ubuntu-20.04
+        steps:
+          - name: Checkout code
+            uses: actions/checkout@v3
+
+          - name: Login to Azure
+            uses: azure/login@v1
+            with:
+              creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+          - name: Login to Azure Container Registry
+            run: |
+              az acr login --name ${{ vars.ACR_NAME }}
+    
+          - name: Build and push Docker image
+            uses: docker/build-push-action@v4.1.1
+            with:
+              context: .
+              push: true
+              tags: ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ env.tag }}
+    
+
+          - name: Run Trivy in GitHub SBOM mode and submit results to Dependency Graph
+            uses: aquasecurity/trivy-action@master
+            with:
+                format: 'github'
+                output: 'dependency-results.sbom.json'
+                image-ref: ${{ vars.ACR_NAME }}.azurecr.io/azure-voting-app-rust:${{ env.tag }}
+                github-pat: ${{ secrets.GITHUB_TOKEN }} # or ${{ secrets.github_pat_name }} if you're using a PAT
