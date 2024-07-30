@@ -18,14 +18,14 @@ curl -L -o buildkit-v0.11.6.linux-amd64.tar.gz https://github.com/moby/buildkit/
 tar -xzf buildkit-v0.11.6.linux-amd64.tar.gz;
 rm buildkit-v0.11.6.linux-amd64.tar.gz;
 
-curl -L -o notation_1.0.0_linux_amd64.tar.gz https://github.com/notaryproject/notation/releases/download/v1.0.0/notation_1.0.0_linux_amd64.tar.gz;
-tar -xzf notation_1.0.0_linux_amd64.tar.gz;
-rm notation_1.0.0_linux_amd64.tar.gz;
+curl -L -o notation_1.1.1_linux_amd64.tar.gz https://github.com/notaryproject/notation/releases/download/v1.1.1/notation_1.1.1_linux_amd64.tar.gz;
+tar -xzf notation_1.1.1_linux_amd64.tar.gz;
+rm notation_1.1.1_linux_amd64.tar.gz;
 sudo mv notation /bin;
 
-curl -L -o notation-azure-kv_1.0.1_linux_amd64.tar.gz https://github.com/Azure/notation-azure-kv/releases/download/v1.0.1/notation-azure-kv_1.0.1_linux_amd64.tar.gz;
-tar -xzf notation-azure-kv_1.0.1_linux_amd64.tar.gz;
-rm notation-azure-kv_1.0.1_linux_amd64.tar.gz;
+curl -L -o notation-azure-kv_1.2.0_linux_amd64.tar.gz https://github.com/Azure/notation-azure-kv/releases/download/v1.2.0/notation-azure-kv_1.2.0_linux_amd64.tar.gz;
+tar -xzf notation-azure-kv_1.2.0_linux_amd64.tar.gz;
+rm notation-azure-kv_1.2.0_linux_amd64.tar.gz;
 
 mkdir -p "${HOME}/.config/notation/plugins/azure-kv";
 mv notation-azure-kv "${HOME}/.config/notation/plugins/azure-kv/"
